@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>מערכת שאלות ותשובות - רשות המיסים</title>
+  <style>
+    :root {
+      --primary: #1a3a6b;
+      --primary-light: #2a5298;
+      --accent: #c8a951;
+      --bg: #f4f6fa;
+      --card-bg: #ffffff;
+      --text: #1e2a3a;
+      --text-muted: #6b7a8d;
+      --border: #dde3ed;
+      --user-bubble: #e8eff9;
+      --bot-bubble: #ffffff;
+      --shadow: 0 2px 12px rgba(26,58,107,0.10);
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      direction: rtl;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-logo {
+      width: 40px;
+      height: 40px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: bold;
+      color: var(--primary);
+    }
+
+    .header-title {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .header-subtitle {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-icon:hover { background: rgba(255,255,255,0.25); }
+
+    /* ─── LAYOUT ─── */
+    .main-layout {
+      display: flex;
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 16px;
+      gap: 20px;
+    }
+
+    /* ─── CHAT PANEL ─── */
+    .chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .chat-box {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      flex: 1;
+      min-height: 500px;
+      max-height: 600px;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    .chat-box:empty::before {
+      content: '';
+    }
+
+    /* ─── MESSAGES ─── */
+    .message {
+      display: flex;
+      gap: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .message.user .msg-avatar {
+      background: var(--primary-light);
+      color: white;
+    }
+
+    .message.bot .msg-avatar {
+      background: var(--accent);
+      color: var(--primary);
+    }
+
+    .msg-content { max-width: 80%; }
+
+    .msg-bubble {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 14.5px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message.user .msg-bubble {
+      background: var(--user-bubble);
+      border: 1px solid #c5d5e8;
+      border-top-left-radius: 4px;
+    }
+
+    .message.bot .msg-bubble {
+      background: var(--bot-bubble);
+      border: 1px solid var(--border);
+      border-top-right-radius: 4px;
+    }
+
+    .msg-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      text-align: left;
+    }
+
+    .message.user .msg-time { text-align: right; }
+
+    .msg-sources {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .source-badge {
+      background: #eef2f8;
+      border: 1px solid #c5d5e8;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11.5px;
+      color: var(--primary-light);
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    .source-badge:hover { background: #dde8f5; }
+
+    /* ─── WELCOME MESSAGE ─── */
+    .welcome-card {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+    }
+
+    .welcome-card h2 { font-size: 18px; margin-bottom: 8px; }
+    .welcome-card p  { font-size: 13px; opacity: 0.85; line-height: 1.6; }
+
+    /* ─── SUGGESTED QUESTIONS ─── */
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .suggestion-btn {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-align: right;
+    }
+
+    .suggestion-btn:hover { background: rgba(255,255,255,0.25); }
+
+    /* ─── INPUT AREA ─── */
+    .input-area {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      padding: 16px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    #question-input {
+      flex: 1;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14.5px;
+      font-family: inherit;
+      direction: rtl;
+      resize: none;
+      line-height: 1.5;
+      min-height: 44px;
+      max-height: 120px;
+      overflow-y: auto;
+      transition: border-color 0.2s;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    #question-input:focus {
+      outline: none;
+      border-color: var(--primary-light);
+      background: white;
+    }
+
+    #question-input::placeholder { color: #aab4c2; }
+
+    .send-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      min-height: 44px;
+    }
+
+    .send-btn:hover:not(:disabled) { background: var(--primary-light); }
+    .send-btn:active:not(:disabled) { transform: scale(0.97); }
+    .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .input-hint {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      text-align: left;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sidebar-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .sidebar-card-header {
+      background: var(--primary);
+      color: white;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-card-body {
+      padding: 12px 16px;
+    }
+
+    /* ─── HISTORY ─── */
+    .history-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 12.5px;
+      line-height: 1.4;
+    }
+
+    .history-item:hover { background: var(--user-bubble); }
+
+    .history-item .hist-q {
+      color: var(--primary-light);
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item .hist-time {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ─── STATUS ─── */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4caf50;
+      display: inline-block;
+    }
+    .status-dot.offline { background: #f44336; }
+    .status-dot.loading { background: #ff9800; animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .status-info { font-size: 12px; color: var(--text-muted); }
+
+    /* ─── TYPING INDICATOR ─── */
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px;
+      align-items: center;
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      animation: typing 1.2s infinite;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      .main-layout { flex-direction: column; padding: 12px; }
+      .sidebar { width: 100%; }
+      .chat-box { min-height: 400px; max-height: 450px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="header-logo">מ"ה</div>
+    <div>
+      <div class="header-title">מערכת שאלות ותשובות</div>
+      <div class="header-subtitle">רשות המיסים בישראל - טיפול בהחזרי מס</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn-icon" onclick="toggleHistory()" title="היסטוריית שאלות">
+      <span>&#128196;</span> היסטוריה
+    </button>
+    <button class="btn-icon" onclick="clearChat()" title="נקה שיחה">
+      <span>&#128465;</span> נקה
+    </button>
+  </div>
+</header>
+
+<div class="main-layout">
+
+  <!-- CHAT -->
+  <div class="chat-panel">
+    <div class="chat-box" id="chat-box">
+
+      <div class="welcome-card">
+        <h2>&#128218; שלום, עובד יקר</h2>
+        <p>
+          אני עוזרך המקצועי לנושאי <strong>החזרי מס</strong>.<br/>
+          שאל אותי כל שאלה הנוגעת לפקודת מס הכנסה, חוזרים מקצועיים, ניתוב שלב א', וחומרי זכותי.
+        </p>
+        <div class="suggestions" id="suggestion-btns">
+          <button class="suggestion-btn" onclick="useSuggestion(this)">מה הן נקודות הזיכוי לעובד?</button>
+          <button class="suggestion-btn" onclick="useSuggestion(this)">איך מחשבים החזר מס לשכיר?</button>
+          <button class="suggestion-btn" onclick="useSuggestion(this)">מה קובע סעיף 47 לפקודה?</button>
+          <button class="suggestion-btn" onclick="useSuggestion(this)">מה ההבדל בין ניכוי לזיכוי?</button>
+          <button class="suggestion-btn" onclick="useSuggestion(this)">ניתוב שלב א' - מה כולל?</button>
+          <button class="suggestion-btn" onclick="useSuggestion(this)">דיווח על הכנסות מחו"ל</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <textarea
+          id="question-input"
+          placeholder="הקלד כאן את שאלתך המקצועית..."
+          rows="1"
+          onkeydown="handleKeyDown(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendQuestion()">
+          שלח &#9654;
+        </button>
+      </div>
+      <div class="input-hint">Enter לשליחה &nbsp;|&nbsp; Shift+Enter לשורה חדשה</div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+
+    <!-- STATUS -->
+    <div class="sidebar-card">
+      <div class="sidebar-card-header">
+        &#9881; מצב המערכת
+      </div>
+      <div class="sidebar-card-body">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span class="status-dot loading" id="status-dot"></span>
+          <span class="status-info" id="status-text">בודק חיבור...</span>
+        </div>
+        <div class="status-info" id="chunks-info"></div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="sidebar-card" id="history-card" style="display:none;">
+      <div class="sidebar-card-header">
+        &#128196; שאלות אחרונות
+      </div>
+      <div class="sidebar-card-body">
+        <ul class="history-list" id="history-list">
+          <li style="font-size:12px;color:var(--text-muted);">טוען...</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- INFO -->
+    <div class="sidebar-card">
+      <div class="sidebar-card-header">
+        &#128214; מקורות ידע
+      </div>
+      <div class="sidebar-card-body" style="font-size:12.5px;line-height:1.8;color:var(--text-muted);">
+        <div>&#10003; קבצים מקומיים של המשרד</div>
+        <div>&#10003; פקודת מס הכנסה</div>
+        <div>&#10003; חוזרים מקצועיים</div>
+        <div>&#10003; ניתוב שלב א' (20 שנה)</div>
+        <div>&#10003; אתר זכותי - מס הכנסה</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ─── STATE ───
+  let isLoading = false;
+
+  // ─── INIT ───
+  window.addEventListener('DOMContentLoaded', () => {
+    checkStatus();
+    autoResize(document.getElementById('question-input'));
+  });
+
+  async function checkStatus() {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      const dot = document.getElementById('status-dot');
+      const txt = document.getElementById('status-text');
+      const info = document.getElementById('chunks-info');
+      if (data.rag_ready) {
+        dot.className = 'status-dot';
+        txt.textContent = 'מערכת פעילה';
+        info.textContent = `${data.chunks_loaded.toLocaleString()} קטעי ידע טעונים`;
+      } else {
+        dot.className = 'status-dot offline';
+        txt.textContent = 'מאגר הידע ריק';
+        info.textContent = 'אנא פנה למנהל המערכת';
+      }
+    } catch {
+      document.getElementById('status-dot').className = 'status-dot offline';
+      document.getElementById('status-text').textContent = 'שגיאת חיבור';
+    }
+  }
+
+  // ─── SEND QUESTION ───
+  async function sendQuestion() {
+    const input = document.getElementById('question-input');
+    const question = input.value.trim();
+    if (!question || isLoading) return;
+
+    isLoading = true;
+    input.value = '';
+    autoResize(input);
+    document.getElementById('send-btn').disabled = true;
+
+    appendMessage('user', question);
+    const typingId = appendTyping();
+
+    try {
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question })
+      });
+
+      removeTyping(typingId);
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        appendMessage('bot', err.detail || 'אירעה שגיאה. אנא נסה שוב.');
+        return;
+      }
+
+      const data = await res.json();
+      appendMessage('bot', data.answer, data.sources || []);
+    } catch (e) {
+      removeTyping(typingId);
+      appendMessage('bot', 'שגיאת רשת - לא ניתן לתקשר עם השרת.');
+    } finally {
+      isLoading = false;
+      document.getElementById('send-btn').disabled = false;
+      input.focus();
+    }
+  }
+
+  // ─── DOM HELPERS ───
+  function appendMessage(role, text, sources = []) {
+    const box = document.getElementById('chat-box');
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'msg-avatar';
+    avatar.textContent = role === 'user' ? '&#128100;' : '&#129302;';
+    avatar.innerHTML = role === 'user' ? '&#128100;' : '&#129302;';
+
+    const content = document.createElement('div');
+    content.className = 'msg-content';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = text;
+
+    const time = document.createElement('div');
+    time.className = 'msg-time';
+    time.textContent = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+
+    content.appendChild(bubble);
+
+    if (sources && sources.length > 0) {
+      const srcDiv = document.createElement('div');
+      srcDiv.className = 'msg-sources';
+      sources.forEach(s => {
+        const badge = document.createElement(s.url ? 'a' : 'span');
+        badge.className = 'source-badge';
+        badge.textContent = s.name;
+        if (s.url) {
+          badge.href = s.url;
+          badge.target = '_blank';
+          badge.rel = 'noopener noreferrer';
+        }
+        srcDiv.appendChild(badge);
+      });
+      content.appendChild(srcDiv);
+    }
+
+    content.appendChild(time);
+    div.appendChild(avatar);
+    div.appendChild(content);
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    return div;
+  }
+
+  let typingCounter = 0;
+  function appendTyping() {
+    const id = `typing-${++typingCounter}`;
+    const box = document.getElementById('chat-box');
+    const div = document.createElement('div');
+    div.className = 'message bot';
+    div.id = id;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'msg-avatar';
+    avatar.innerHTML = '&#129302;';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.innerHTML = '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+
+    div.appendChild(avatar);
+    div.appendChild(bubble);
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    return id;
+  }
+
+  function removeTyping(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  // ─── KEYBOARD ───
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendQuestion();
+    }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  // ─── SUGGESTIONS ───
+  function useSuggestion(btn) {
+    const input = document.getElementById('question-input');
+    input.value = btn.textContent;
+    autoResize(input);
+    sendQuestion();
+  }
+
+  // ─── HISTORY ───
+  function toggleHistory() {
+    const card = document.getElementById('history-card');
+    if (card.style.display === 'none') {
+      card.style.display = 'block';
+      loadHistory();
+    } else {
+      card.style.display = 'none';
+    }
+  }
+
+  async function loadHistory() {
+    try {
+      const res = await fetch('/api/history');
+      const data = await res.json();
+      const list = document.getElementById('history-list');
+      list.innerHTML = '';
+      if (!data.history || data.history.length === 0) {
+        list.innerHTML = '<li style="font-size:12px;color:var(--text-muted);">אין היסטוריה עדיין</li>';
+        return;
+      }
+      data.history.slice(0, 20).forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'history-item';
+        li.innerHTML = `
+          <div class="hist-q">${escHtml(item.question)}</div>
+          <div class="hist-time">${formatDate(item.created_at)}</div>
+        `;
+        li.onclick = () => {
+          document.getElementById('question-input').value = item.question;
+          autoResize(document.getElementById('question-input'));
+        };
+        list.appendChild(li);
+      });
+    } catch {
+      document.getElementById('history-list').innerHTML =
+        '<li style="font-size:12px;color:red;">שגיאה בטעינת ההיסטוריה</li>';
+    }
+  }
+
+  // ─── UTILS ───
+  function clearChat() {
+    const box = document.getElementById('chat-box');
+    // Keep only welcome card
+    const welcome = box.querySelector('.welcome-card');
+    box.innerHTML = '';
+    if (welcome) box.appendChild(welcome);
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatDate(iso) {
+    try {
+      return new Date(iso).toLocaleString('he-IL', {
+        day:'2-digit', month:'2-digit', year:'2-digit',
+        hour:'2-digit', minute:'2-digit'
+      });
+    } catch { return iso; }
+  }
+</script>
+</body>
+</html>

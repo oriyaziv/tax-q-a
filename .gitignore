@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+node_modules/
+*.log
+.DS_Store
+# Keep knowledge base but ignore raw documents
+/raw_docs/

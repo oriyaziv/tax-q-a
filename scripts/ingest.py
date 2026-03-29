@@ -144,7 +144,7 @@ def ingest_local_documents(folder: Path) -> list[dict]:
 # ZCHUT.ORG.IL SCRAPER
 # ─────────────────────────────────────────────
 
-ZCHUT_BASE = "https://www.zchut.org.il"
+ZCHUT_BASE = "https://www.kolzchut.org.il"
 ZCHUT_TAX_KEYWORDS = [
     "מס הכנסה", "החזר מס", "פקודת מס הכנסה", "ניכוי מס",
     "זיכוי מס", "נקודות זיכוי", "הכנסה חייבת", "דו\"ח שנתי"
@@ -201,32 +201,42 @@ def scrape_zchut_page(url: str) -> Optional[dict]:
 
 
 def get_zchut_tax_urls() -> list[str]:
-    """Discover tax-related URLs on zchut.org.il"""
+    """Discover tax-related URLs on kolzchut.org.il"""
     urls = set()
     headers = {"User-Agent": "Mozilla/5.0 (compatible; TaxBot/1.0)"}
 
-    # Known tax-related sections
-    seed_urls = [
-        f"{ZCHUT_BASE}/topics/taxes",
-        f"{ZCHUT_BASE}/topics/income-tax",
-        f"{ZCHUT_BASE}/topics/%D7%9E%D7%A1-%D7%94%D7%9B%D7%A0%D7%A1%D7%94",
-        f"{ZCHUT_BASE}/topics/%D7%94%D7%97%D7%96%D7%A8-%D7%9E%D7%A1",
-        f"{ZCHUT_BASE}/topics/%D7%A0%D7%A7%D7%95%D7%93%D7%95%D7%AA-%D7%96%D7%99%D7%9B%D7%95%D7%99",
+    # Known income-tax pages on kolzchut - Hebrew wiki-style URLs
+    known_pages = [
+        "מדרגות_מס_הכנסה",
+        "תיאום_מס_הכנסה",
+        "החזר_מס_הכנסה",
+        "נקודות_זיכוי_ממס_הכנסה",
+        "ניכויים_ממס_הכנסה",
+        "זיכויים_ממס_הכנסה",
+        "הגשת_דוח_שנתי_למס_הכנסה",
+        "מס_הכנסה_לשכירים",
+        "פטור_ממס_הכנסה",
+        "ניכוי_הוצאות_ממס_הכנסה",
+        "נקודות_זיכוי_לעולים_חדשים",
+        "נקודות_זיכוי_לבן_זוג_שאינו_עובד",
+        "נקודות_זיכוי_עבור_ילדים",
+        "פטור_ממס_הכנסה_לנכים",
+        "מס_הכנסה_על_הכנסות_מחו\"ל",
+        "מקדמות_מס_הכנסה",
+        "שומת_מס_הכנסה",
+        "ערעור_על_שומת_מס_הכנסה",
+        "מס_הכנסה_לפנסיונרים",
+        "זיכוי_ממס_עבור_תרומות",
     ]
+    for page in known_pages:
+        urls.add(f"{ZCHUT_BASE}/he/{page}")
 
-    # Also try the sitemap
-    try:
-        sitemap_resp = requests.get(f"{ZCHUT_BASE}/sitemap.xml", headers=headers, timeout=15)
-        if sitemap_resp.status_code == 200:
-            soup = BeautifulSoup(sitemap_resp.text, "xml")
-            for loc in soup.find_all("loc"):
-                u = loc.get_text(strip=True)
-                if ZCHUT_BASE in u:
-                    urls.add(u)
-    except Exception:
-        pass
-
-    # Crawl seed URLs for links
+    # Crawl category pages for more links
+    seed_urls = [
+        f"{ZCHUT_BASE}/he/קטגוריה:מס_הכנסה",
+        f"{ZCHUT_BASE}/he/קטגוריה:החזרי_מס",
+        f"{ZCHUT_BASE}/he/קטגוריה:זכויות_עובדים_ומעסיקים",
+    ]
     for seed in seed_urls:
         try:
             resp = requests.get(seed, headers=headers, timeout=15)
@@ -235,10 +245,9 @@ def get_zchut_tax_urls() -> list[str]:
             soup = BeautifulSoup(resp.text, "html.parser")
             for a in soup.find_all("a", href=True):
                 href = a["href"]
-                if href.startswith("/"):
-                    href = ZCHUT_BASE + href
-                if ZCHUT_BASE in href and href not in urls:
-                    urls.add(href)
+                if href.startswith("/he/") and "קטגוריה" not in href and "מיוחד" not in href:
+                    full_url = ZCHUT_BASE + href
+                    urls.add(full_url)
             time.sleep(0.3)
         except Exception:
             pass
@@ -272,13 +281,22 @@ def ingest_zchut(max_pages: int = 200) -> list[dict]:
 # TAX AUTHORITY CIRCULARS - ניתוב שלב א'
 # ─────────────────────────────────────────────
 
-TAX_GOV_BASE = "https://www.misim.gov.il"
-TAX_ALT_BASE = "https://taxes.gov.il"
+GOV_IL_BASE = "https://www.gov.il"
 
-NITUB_SEARCH_URLS = [
-    "https://www.misim.gov.il/mfnhbhvhm/clsMain.aspx",
-    "https://taxes.gov.il/Pages/ListAgafimAndMasovim.aspx",
-    "https://www.misim.gov.il/mfnhbhvhm/",
+# הוראות ביצוע - ניתוב שלב א' published on gov.il
+# URL pattern: https://www.gov.il/BlobFolder/policy/inst-XX-YYYY/he/IncomeTax_inst-XX-YYYY.pdf
+# Known instruction numbers by year (approximate)
+NITUB_KNOWN_PDFS = [
+    {"title": "ניתוב שלב א' 2025 - הוראת ביצוע 07/2025", "url": "https://www.gov.il/BlobFolder/policy/inst-07-2025/he/IncomeTax_inst-07-2025.pdf"},
+    {"title": "ניתוב שלב א' 2024 - הוראת ביצוע 05/2024", "url": "https://www.gov.il/BlobFolder/policy/inst-05-2024/he/IncomeTax_inst-05-2024.pdf"},
+    {"title": "ניתוב שלב א' 2023 - הוראת ביצוע 03/2023", "url": "https://www.gov.il/BlobFolder/policy/inst-03-2023/he/IncomeTax_inst-03-2023.pdf"},
+    {"title": "ניתוב שלב א' 2022 - הוראת ביצוע 04/2022", "url": "https://www.gov.il/BlobFolder/policy/inst-04-2022/he/IncomeTax_inst-04-2022.pdf"},
+    {"title": "ניתוב שלב א' 2021 - הוראת ביצוע 05/2021", "url": "https://www.gov.il/BlobFolder/policy/inst-05-2021/he/IncomeTax_inst-05-2021.pdf"},
+    {"title": "ניתוב שלב א' 2020 - הוראת ביצוע 04/2020", "url": "https://www.gov.il/BlobFolder/policy/inst-04-2020/he/IncomeTax_inst-04-2020.pdf"},
+    {"title": "ניתוב שלב א' 2019 - הוראת ביצוע 05/2019", "url": "https://www.gov.il/BlobFolder/policy/inst-05-2019/he/IncomeTax_inst-05-2019.pdf"},
+    {"title": "ניתוב שלב א' 2018 - הוראת ביצוע 06/2018", "url": "https://www.gov.il/BlobFolder/policy/inst-06-2018/he/IncomeTax_inst-06-2018.pdf"},
+    # Older ones on claltax archive
+    {"title": "ניתוב שלב א' - ארכיון הוראות ביצוע", "url": "https://claltax.com/הוראות-ביצוע-מס-הכנסה/"},
 ]
 
 
@@ -299,6 +317,14 @@ def fetch_tax_circular_text(url: str) -> Optional[str]:
             soup = BeautifulSoup(resp.text, "html.parser")
             for tag in soup.find_all(["script", "style", "nav", "footer"]):
                 tag.decompose()
+            # For claltax - find all PDF links for circulars
+            if "claltax.com" in url:
+                links = []
+                for a in soup.find_all("a", href=True):
+                    if ".pdf" in a["href"].lower() and ("inst" in a["href"].lower() or "ניתוב" in a.get_text()):
+                        links.append(a["href"])
+                # Return list of PDF URLs as text for further processing
+                return "\n".join(links) if links else None
             main = soup.find("main") or soup.find("article") or soup.find("body")
             return main.get_text(separator="\n", strip=True) if main else None
     except Exception as e:
@@ -307,43 +333,8 @@ def fetch_tax_circular_text(url: str) -> Optional[str]:
 
 
 def search_nitub_circulars() -> list[dict]:
-    """Search for ניתוב שלב א' circulars on tax authority websites."""
-    circulars = []
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; TaxBot/1.0)"}
-
-    search_queries = [
-        "https://www.misim.gov.il/mfnhbhvhm/clsMain.aspx?nType=2&nYear=2024",
-        "https://taxes.gov.il/incomeTax/Pages/MaasHavara.aspx",
-        "https://www.gov.il/he/departments/publications/reports/nitub_shlavA",
-        "https://www.gov.il/he/search?q=%D7%A0%D7%99%D7%AA%D7%95%D7%91+%D7%A9%D7%9C%D7%91+%D7%90&skip=0&limit=20&OfficeId=0130&topics=income_tax",
-    ]
-
-    for url in search_queries:
-        try:
-            resp = requests.get(url, headers=headers, timeout=15)
-            if resp.status_code != 200:
-                continue
-            soup = BeautifulSoup(resp.text, "html.parser")
-
-            # Look for links containing ניתוב
-            for a in soup.find_all("a", href=True):
-                link_text = a.get_text(strip=True)
-                href = a["href"]
-                if "ניתוב" in link_text or "nitub" in href.lower():
-                    full_url = href if href.startswith("http") else "https://www.gov.il" + href
-                    circulars.append({"title": link_text, "url": full_url})
-            time.sleep(0.5)
-        except Exception:
-            pass
-
-    # Direct known URLs for recent years
-    known_circulars = [
-        {"title": f"ניתוב שלב א' {year}", "url": f"https://www.misim.gov.il/mfnhbhvhm/clsMain.aspx?nType=2&nYear={year}"}
-        for year in range(2005, 2025)
-    ]
-    circulars.extend(known_circulars)
-
-    return circulars
+    """Return known ניתוב שלב א' circular URLs."""
+    return NITUB_KNOWN_PDFS
 
 
 def ingest_tax_circulars() -> list[dict]:
@@ -355,10 +346,12 @@ def ingest_tax_circulars() -> list[dict]:
     for circ in circulars:
         print(f"  Fetching: {circ['title']}")
         text = fetch_tax_circular_text(circ["url"])
-        if text and len(text.strip()) > 100 and "ניתוב" in text:
+        if text and len(text.strip()) > 100:
             chunks = chunk_text(text, source=circ["title"], url=circ["url"])
             all_chunks.extend(chunks)
             print(f"    → {len(chunks)} chunks")
+        else:
+            print(f"    → לא נמצא תוכן (ייתכן שה-PDF אינו זמין)")
         time.sleep(0.5)
 
     print(f"  Total circular chunks: {len(all_chunks)}")

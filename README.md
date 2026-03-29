@@ -20,7 +20,7 @@ export GEMINI_API_KEY=your_key_here   # Linux/Mac
 # או: set GEMINI_API_KEY=your_key_here   # Windows
 
 # הרץ את הסקריפט עם הנתיב לתיקיית המסמכים שלך
-python scripts/ingest.py --docs "C:/Users/YourName/אוריה- אפליקציות קלוד- קלוד קוד מס הכנסה"
+python scripts/ingest.py --docs "D:\אוריה\יצירת אפליקציות קלוד\קלוד קוד מס הכנסה"
 ```
 
 הסקריפט יעשה:
@@ -47,7 +47,7 @@ git push origin claude/tax-knowledge-portal-fcaXi
 ## עדכון מאגר הידע
 
 בכל פעם שיש מסמכים חדשים:
-1. הרץ שוב: `python scripts/ingest.py --docs /path/to/docs`
+1. הרץ שוב: `python scripts/ingest.py --docs "D:\אוריה\יצירת אפליקציות קלוד\קלוד קוד מס הכנסה"`
 2. Push לגיט - Railway מפרוס אוטומטית
 
 ## מבנה הפרויקט

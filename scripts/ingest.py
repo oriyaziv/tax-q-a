@@ -2,13 +2,13 @@
 Ingestion script - run ONCE locally to build the knowledge base.
 Processes:
   1. Local PDF/Word documents
-  2. Zchut.org.il (income-tax related pages)
+  2. kolzchut.org.il (income-tax related pages)
   3. Israeli Tax Authority circulars (ניתוב שלב א')
 
 Usage:
     pip install -r requirements.txt
-    export GEMINI_API_KEY=your_key_here
-    python scripts/ingest.py --docs /path/to/your/documents
+    set GEMINI_API_KEY=your_key_here
+    python scripts/ingest.py --docs "D:\אוריה\יצירת אפליקציות קלוד\קלוד קוד מס הכנסה"
 """
 import argparse
 import json
@@ -22,13 +22,17 @@ import requests
 from bs4 import BeautifulSoup
 import PyPDF2
 from docx import Document
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 OUTPUT_PATH = Path(__file__).parent.parent / "data" / "knowledge_base.json"
-EMBED_MODEL = "models/embedding-001"
-CHUNK_SIZE = 800        # characters per chunk
-CHUNK_OVERLAP = 150     # overlap between chunks
-RATE_LIMIT_DELAY = 0.5  # seconds between API calls
+EMBED_MODEL = "text-embedding-004"
+CHUNK_SIZE = 800
+CHUNK_OVERLAP = 150
+RATE_LIMIT_DELAY = 0.5
+
+_client: Optional[genai.Client] = None
+
 
 # ─────────────────────────────────────────────
 # TEXT EXTRACTION
@@ -72,7 +76,6 @@ def extract_text_from_file(path: Path) -> Optional[str]:
 # ─────────────────────────────────────────────
 
 def chunk_text(text: str, source: str, url: str = "") -> list[dict]:
-    """Split text into overlapping chunks."""
     text = re.sub(r'\n{3,}', '\n\n', text).strip()
     chunks = []
     start = 0
@@ -80,11 +83,7 @@ def chunk_text(text: str, source: str, url: str = "") -> list[dict]:
         end = start + CHUNK_SIZE
         chunk = text[start:end]
         if chunk.strip():
-            chunks.append({
-                "text": chunk.strip(),
-                "source": source,
-                "url": url
-            })
+            chunks.append({"text": chunk.strip(), "source": source, "url": url})
         start += CHUNK_SIZE - CHUNK_OVERLAP
     return chunks
 
@@ -94,24 +93,24 @@ def chunk_text(text: str, source: str, url: str = "") -> list[dict]:
 # ─────────────────────────────────────────────
 
 def embed_chunks(chunks: list[dict]) -> list[dict]:
-    """Add embeddings to chunks using Gemini."""
+    """Add embeddings to all chunks using Gemini text-embedding-004 via v1 API."""
     embedded = []
     total = len(chunks)
     for i, chunk in enumerate(chunks):
         try:
-            result = genai.embed_content(
+            result = _client.models.embed_content(
                 model=EMBED_MODEL,
-                content=chunk["text"],
-                task_type="retrieval_document"
+                contents=chunk["text"],
+                config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
             )
-            chunk["embedding"] = result["embedding"]
+            chunk["embedding"] = result.embeddings[0].values
             embedded.append(chunk)
-            if (i + 1) % 10 == 0:
+            if (i + 1) % 20 == 0:
                 print(f"  Embedded {i + 1}/{total} chunks...")
             time.sleep(RATE_LIMIT_DELAY)
         except Exception as e:
             print(f"  [error] Embedding failed for chunk {i}: {e}")
-            time.sleep(2)
+            time.sleep(3)
     return embedded
 
 
@@ -141,13 +140,13 @@ def ingest_local_documents(folder: Path) -> list[dict]:
 
 
 # ─────────────────────────────────────────────
-# ZCHUT.ORG.IL SCRAPER
+# KOLZCHUT.ORG.IL SCRAPER
 # ─────────────────────────────────────────────
 
 ZCHUT_BASE = "https://www.kolzchut.org.il"
 ZCHUT_TAX_KEYWORDS = [
     "מס הכנסה", "החזר מס", "פקודת מס הכנסה", "ניכוי מס",
-    "זיכוי מס", "נקודות זיכוי", "הכנסה חייבת", "דו\"ח שנתי"
+    "זיכוי מס", "נקודות זיכוי", "הכנסה חייבת", 'דו"ח שנתי'
 ]
 
 
@@ -163,11 +162,9 @@ def scrape_zchut_page(url: str) -> Optional[dict]:
             return None
         soup = BeautifulSoup(resp.text, "html.parser")
 
-        # Get page title
         title_tag = soup.find("h1") or soup.find("title")
         title = title_tag.get_text(strip=True) if title_tag else url
 
-        # Get main content
         content_div = (
             soup.find("div", class_="entry-content") or
             soup.find("div", id="main-content") or
@@ -178,7 +175,6 @@ def scrape_zchut_page(url: str) -> Optional[dict]:
         if not content_div:
             return None
 
-        # Extract text
         for tag in content_div.find_all(["script", "style", "nav"]):
             tag.decompose()
         text = content_div.get_text(separator="\n", strip=True)
@@ -186,52 +182,29 @@ def scrape_zchut_page(url: str) -> Optional[dict]:
         if not is_tax_relevant(text):
             return None
 
-        # Check for relevant laws mentioned
-        has_income_tax_law = "פקודת מס הכנסה" in text
-
-        return {
-            "title": title,
-            "text": text,
-            "url": url,
-            "has_income_tax_law": has_income_tax_law
-        }
+        return {"title": title, "text": text, "url": url}
     except Exception as e:
         print(f"  [error] scrape_zchut_page({url}): {e}")
         return None
 
 
 def get_zchut_tax_urls() -> list[str]:
-    """Discover tax-related URLs on kolzchut.org.il"""
     urls = set()
     headers = {"User-Agent": "Mozilla/5.0 (compatible; TaxBot/1.0)"}
 
-    # Known income-tax pages on kolzchut - Hebrew wiki-style URLs
     known_pages = [
-        "מדרגות_מס_הכנסה",
-        "תיאום_מס_הכנסה",
-        "החזר_מס_הכנסה",
-        "נקודות_זיכוי_ממס_הכנסה",
-        "ניכויים_ממס_הכנסה",
-        "זיכויים_ממס_הכנסה",
-        "הגשת_דוח_שנתי_למס_הכנסה",
-        "מס_הכנסה_לשכירים",
-        "פטור_ממס_הכנסה",
-        "ניכוי_הוצאות_ממס_הכנסה",
-        "נקודות_זיכוי_לעולים_חדשים",
-        "נקודות_זיכוי_לבן_זוג_שאינו_עובד",
-        "נקודות_זיכוי_עבור_ילדים",
-        "פטור_ממס_הכנסה_לנכים",
-        "מס_הכנסה_על_הכנסות_מחו\"ל",
-        "מקדמות_מס_הכנסה",
-        "שומת_מס_הכנסה",
-        "ערעור_על_שומת_מס_הכנסה",
-        "מס_הכנסה_לפנסיונרים",
-        "זיכוי_ממס_עבור_תרומות",
+        "מדרגות_מס_הכנסה", "תיאום_מס_הכנסה", "החזר_מס_הכנסה",
+        "נקודות_זיכוי_ממס_הכנסה", "ניכויים_ממס_הכנסה", "זיכויים_ממס_הכנסה",
+        "הגשת_דוח_שנתי_למס_הכנסה", "מס_הכנסה_לשכירים", "פטור_ממס_הכנסה",
+        "ניכוי_הוצאות_ממס_הכנסה", "נקודות_זיכוי_לעולים_חדשים",
+        "נקודות_זיכוי_לבן_זוג_שאינו_עובד", "נקודות_זיכוי_עבור_ילדים",
+        "פטור_ממס_הכנסה_לנכים", 'מס_הכנסה_על_הכנסות_מחו"ל',
+        "מקדמות_מס_הכנסה", "שומת_מס_הכנסה", "ערעור_על_שומת_מס_הכנסה",
+        "מס_הכנסה_לפנסיונרים", "זיכוי_ממס_עבור_תרומות",
     ]
     for page in known_pages:
         urls.add(f"{ZCHUT_BASE}/he/{page}")
 
-    # Crawl category pages for more links
     seed_urls = [
         f"{ZCHUT_BASE}/he/קטגוריה:מס_הכנסה",
         f"{ZCHUT_BASE}/he/קטגוריה:החזרי_מס",
@@ -246,8 +219,7 @@ def get_zchut_tax_urls() -> list[str]:
             for a in soup.find_all("a", href=True):
                 href = a["href"]
                 if href.startswith("/he/") and "קטגוריה" not in href and "מיוחד" not in href:
-                    full_url = ZCHUT_BASE + href
-                    urls.add(full_url)
+                    urls.add(ZCHUT_BASE + href)
             time.sleep(0.3)
         except Exception:
             pass
@@ -256,7 +228,7 @@ def get_zchut_tax_urls() -> list[str]:
 
 
 def ingest_zchut(max_pages: int = 200) -> list[dict]:
-    print(f"\n[2/3] Scraping zchut.org.il (tax-related pages)...")
+    print(f"\n[2/3] Scraping kolzchut.org.il (tax-related pages)...")
     urls = get_zchut_tax_urls()
     print(f"  Found {len(urls)} candidate URLs")
 
@@ -265,8 +237,7 @@ def ingest_zchut(max_pages: int = 200) -> list[dict]:
     for url in urls[:max_pages]:
         page = scrape_zchut_page(url)
         if page:
-            source_name = f"זכותי - {page['title']}"
-            chunks = chunk_text(page["text"], source=source_name, url=url)
+            chunks = chunk_text(page["text"], source=f"זכותי - {page['title']}", url=url)
             all_chunks.extend(chunks)
             processed += 1
             if processed % 20 == 0:
@@ -281,11 +252,6 @@ def ingest_zchut(max_pages: int = 200) -> list[dict]:
 # TAX AUTHORITY CIRCULARS - ניתוב שלב א'
 # ─────────────────────────────────────────────
 
-GOV_IL_BASE = "https://www.gov.il"
-
-# הוראות ביצוע - ניתוב שלב א' published on gov.il
-# URL pattern: https://www.gov.il/BlobFolder/policy/inst-XX-YYYY/he/IncomeTax_inst-XX-YYYY.pdf
-# Known instruction numbers by year (approximate)
 NITUB_KNOWN_PDFS = [
     {"title": "ניתוב שלב א' 2025 - הוראת ביצוע 07/2025", "url": "https://www.gov.il/BlobFolder/policy/inst-07-2025/he/IncomeTax_inst-07-2025.pdf"},
     {"title": "ניתוב שלב א' 2024 - הוראת ביצוע 05/2024", "url": "https://www.gov.il/BlobFolder/policy/inst-05-2024/he/IncomeTax_inst-05-2024.pdf"},
@@ -295,13 +261,11 @@ NITUB_KNOWN_PDFS = [
     {"title": "ניתוב שלב א' 2020 - הוראת ביצוע 04/2020", "url": "https://www.gov.il/BlobFolder/policy/inst-04-2020/he/IncomeTax_inst-04-2020.pdf"},
     {"title": "ניתוב שלב א' 2019 - הוראת ביצוע 05/2019", "url": "https://www.gov.il/BlobFolder/policy/inst-05-2019/he/IncomeTax_inst-05-2019.pdf"},
     {"title": "ניתוב שלב א' 2018 - הוראת ביצוע 06/2018", "url": "https://www.gov.il/BlobFolder/policy/inst-06-2018/he/IncomeTax_inst-06-2018.pdf"},
-    # Older ones on claltax archive
     {"title": "ניתוב שלב א' - ארכיון הוראות ביצוע", "url": "https://claltax.com/הוראות-ביצוע-מס-הכנסה/"},
 ]
 
 
-def fetch_tax_circular_text(url: str) -> Optional[str]:
-    """Fetch text from a tax authority page or PDF."""
+def fetch_circular_text(url: str) -> Optional[str]:
     try:
         headers = {"User-Agent": "Mozilla/5.0 (compatible; TaxBot/1.0)"}
         if url.lower().endswith(".pdf"):
@@ -317,43 +281,26 @@ def fetch_tax_circular_text(url: str) -> Optional[str]:
             soup = BeautifulSoup(resp.text, "html.parser")
             for tag in soup.find_all(["script", "style", "nav", "footer"]):
                 tag.decompose()
-            # For claltax - find all PDF links for circulars
-            if "claltax.com" in url:
-                links = []
-                for a in soup.find_all("a", href=True):
-                    if ".pdf" in a["href"].lower() and ("inst" in a["href"].lower() or "ניתוב" in a.get_text()):
-                        links.append(a["href"])
-                # Return list of PDF URLs as text for further processing
-                return "\n".join(links) if links else None
             main = soup.find("main") or soup.find("article") or soup.find("body")
             return main.get_text(separator="\n", strip=True) if main else None
     except Exception as e:
-        print(f"  [error] fetch_tax_circular_text({url}): {e}")
+        print(f"  [error] fetch_circular_text({url}): {e}")
         return None
-
-
-def search_nitub_circulars() -> list[dict]:
-    """Return known ניתוב שלב א' circular URLs."""
-    return NITUB_KNOWN_PDFS
 
 
 def ingest_tax_circulars() -> list[dict]:
     print(f"\n[3/3] Fetching Tax Authority circulars (ניתוב שלב א')...")
-    circulars = search_nitub_circulars()
-    print(f"  Found {len(circulars)} candidate circular pages")
-
     all_chunks = []
-    for circ in circulars:
+    for circ in NITUB_KNOWN_PDFS:
         print(f"  Fetching: {circ['title']}")
-        text = fetch_tax_circular_text(circ["url"])
+        text = fetch_circular_text(circ["url"])
         if text and len(text.strip()) > 100:
             chunks = chunk_text(text, source=circ["title"], url=circ["url"])
             all_chunks.extend(chunks)
             print(f"    → {len(chunks)} chunks")
         else:
-            print(f"    → לא נמצא תוכן (ייתכן שה-PDF אינו זמין)")
+            print(f"    → לא נמצא תוכן")
         time.sleep(0.5)
-
     print(f"  Total circular chunks: {len(all_chunks)}")
     return all_chunks
 
@@ -363,11 +310,13 @@ def ingest_tax_circulars() -> list[dict]:
 # ─────────────────────────────────────────────
 
 def main():
+    global _client
+
     parser = argparse.ArgumentParser(description="Build knowledge base for Tax Q&A")
     parser.add_argument("--docs", type=str, required=True, help="Path to local documents folder")
-    parser.add_argument("--skip-web", action="store_true", help="Skip web scraping (only process local docs)")
-    parser.add_argument("--skip-zchut", action="store_true", help="Skip zchut.org.il scraping")
-    parser.add_argument("--skip-circulars", action="store_true", help="Skip tax circulars scraping")
+    parser.add_argument("--skip-web", action="store_true", help="Skip all web scraping")
+    parser.add_argument("--skip-zchut", action="store_true", help="Skip kolzchut.org.il")
+    parser.add_argument("--skip-circulars", action="store_true", help="Skip tax circulars")
     args = parser.parse_args()
 
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -376,8 +325,8 @@ def main():
         print("Get a free key at: https://aistudio.google.com/app/apikey")
         exit(1)
 
-    genai.configure(api_key=api_key)
-    print(f"[INFO] Using Gemini API for embeddings")
+    _client = genai.Client(api_key=api_key)
+    print(f"[INFO] Gemini client initialized (using v1 API)")
 
     docs_folder = Path(args.docs)
     if not docs_folder.exists():
@@ -385,27 +334,20 @@ def main():
         exit(1)
 
     all_chunks = []
+    all_chunks.extend(ingest_local_documents(docs_folder))
 
-    # 1. Local documents
-    local_chunks = ingest_local_documents(docs_folder)
-    all_chunks.extend(local_chunks)
-
-    # 2. Zchut.org.il
     if not args.skip_web and not args.skip_zchut:
-        zchut_chunks = ingest_zchut()
-        all_chunks.extend(zchut_chunks)
+        all_chunks.extend(ingest_zchut())
     else:
-        print("\n[2/3] Skipping zchut.org.il")
+        print("\n[2/3] Skipping kolzchut.org.il")
 
-    # 3. Tax circulars
     if not args.skip_web and not args.skip_circulars:
-        circular_chunks = ingest_tax_circulars()
-        all_chunks.extend(circular_chunks)
+        all_chunks.extend(ingest_tax_circulars())
     else:
         print("\n[3/3] Skipping tax circulars")
 
     print(f"\n[EMBED] Total chunks to embed: {len(all_chunks)}")
-    print("[EMBED] This may take a few minutes (rate-limited API calls)...")
+    print("[EMBED] Starting embedding (this may take several minutes)...")
 
     embedded_chunks = embed_chunks(all_chunks)
 
@@ -413,12 +355,12 @@ def main():
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump({"chunks": embedded_chunks}, f, ensure_ascii=False)
 
-    print(f"\n[DONE] Knowledge base saved to: {OUTPUT_PATH}")
-    print(f"       {len(embedded_chunks)} chunks ready")
+    print(f"\n[DONE] Knowledge base saved: {OUTPUT_PATH}")
+    print(f"       {len(embedded_chunks)} chunks embedded successfully")
     print(f"\nNext steps:")
-    print(f"  1. git add data/knowledge_base.json")
-    print(f"  2. git commit -m 'Update knowledge base'")
-    print(f"  3. git push origin claude/tax-knowledge-portal-fcaXi")
+    print(f"  git add data/knowledge_base.json")
+    print(f"  git commit -m 'Add knowledge base'")
+    print(f"  git push origin claude/tax-knowledge-portal-fcaXi")
 
 
 if __name__ == "__main__":

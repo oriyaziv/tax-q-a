@@ -25,7 +25,7 @@ from docx import Document
 import google.generativeai as genai
 
 OUTPUT_PATH = Path(__file__).parent.parent / "data" / "knowledge_base.json"
-EMBED_MODEL = "models/text-embedding-004"
+EMBED_MODEL = "models/embedding-001"
 CHUNK_SIZE = 800        # characters per chunk
 CHUNK_OVERLAP = 150     # overlap between chunks
 RATE_LIMIT_DELAY = 0.5  # seconds between API calls

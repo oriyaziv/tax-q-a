@@ -15,7 +15,7 @@ TOP_K = 8  # number of relevant chunks to retrieve
 _knowledge_base: list[dict] = []
 _embeddings_matrix: Optional[np.ndarray] = None
 _model = None
-_embed_model = "models/text-embedding-004"
+_embed_model = "models/embedding-001"
 _chat_model = "gemini-1.5-flash"
 
 

@@ -34,9 +34,8 @@ _embed_model: str = ""   # determined at runtime
 
 # Candidate embedding models in preference order (tried against both v1 and v1beta)
 EMBED_CANDIDATES = [
-    "text-embedding-004",
-    "gemini-embedding-exp-03-07",
-    "embedding-001",
+    "gemini-embedding-001",
+    "gemini-embedding-2-preview",
 ]
 
 

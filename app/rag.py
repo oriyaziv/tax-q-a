@@ -12,8 +12,8 @@ from typing import Optional
 KNOWLEDGE_BASE_PATH = Path(__file__).parent.parent / "data" / "knowledge_base.json"
 TOP_K = 8
 BASE = "https://generativelanguage.googleapis.com"
-EMBED_CANDIDATES = ["text-embedding-004", "gemini-embedding-exp-03-07", "embedding-001"]
-CHAT_URL = f"{BASE}/v1/models/gemini-1.5-flash:generateContent"
+EMBED_CANDIDATES = ["gemini-embedding-001", "gemini-embedding-2-preview"]
+CHAT_URL = f"{BASE}/v1beta/models/gemini-2.0-flash:generateContent"
 
 _knowledge_base: list[dict] = []
 _embeddings_matrix: Optional[np.ndarray] = None

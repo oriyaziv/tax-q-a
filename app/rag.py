@@ -1,34 +1,30 @@
 """
 RAG (Retrieval-Augmented Generation) engine
-Uses google-genai (v1 API) for embeddings and generation
+Uses Gemini v1 REST API directly - bypasses SDK version issues
 """
 import json
 import os
 import numpy as np
+import requests
 from pathlib import Path
 from typing import Optional
-from google import genai
-from google.genai import types
 
 KNOWLEDGE_BASE_PATH = Path(__file__).parent.parent / "data" / "knowledge_base.json"
 TOP_K = 8
-EMBED_MODEL = "text-embedding-004"
-CHAT_MODEL = "gemini-1.5-flash"
+
+EMBED_URL = "https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent"
+CHAT_URL  = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent"
 
 _knowledge_base: list[dict] = []
 _embeddings_matrix: Optional[np.ndarray] = None
-_client: Optional[genai.Client] = None
+_api_key: str = ""
 
 
 def init():
-    global _client
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
+    global _api_key
+    _api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not _api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable is not set")
-    _client = genai.Client(
-        api_key=api_key,
-        http_options=types.HttpOptions(api_version="v1")
-    )
     _load_knowledge_base()
     print(f"[RAG] Loaded {len(_knowledge_base)} chunks from knowledge base")
 
@@ -36,7 +32,7 @@ def init():
 def _load_knowledge_base():
     global _knowledge_base, _embeddings_matrix
     if not KNOWLEDGE_BASE_PATH.exists():
-        print(f"[RAG] Warning: knowledge_base.json not found")
+        print("[RAG] Warning: knowledge_base.json not found")
         _knowledge_base = []
         _embeddings_matrix = None
         return
@@ -51,12 +47,14 @@ def _load_knowledge_base():
 
 
 def _embed_query(text: str) -> np.ndarray:
-    result = _client.models.embed_content(
-        model=EMBED_MODEL,
-        contents=text,
-        config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY")
-    )
-    vec = np.array(result.embeddings[0].values, dtype=np.float32)
+    payload = {
+        "model": "models/text-embedding-004",
+        "content": {"parts": [{"text": text}]},
+        "taskType": "RETRIEVAL_QUERY"
+    }
+    resp = requests.post(EMBED_URL, params={"key": _api_key}, json=payload, timeout=30)
+    resp.raise_for_status()
+    vec = np.array(resp.json()["embedding"]["values"], dtype=np.float32)
     norm = np.linalg.norm(vec)
     return vec / norm if norm > 0 else vec
 
@@ -97,7 +95,6 @@ def answer_question(question: str) -> dict:
 
     query_vec = _embed_query(question)
     chunks = _retrieve(query_vec)
-
     relevant = [c for c in chunks if c["score"] > 0.3] or chunks[:3]
 
     context_parts = []
@@ -117,13 +114,12 @@ def answer_question(question: str) -> dict:
 
 ענה על השאלה בעברית על בסיס ההקשר לעיל:"""
 
-    response = _client.models.generate_content(
-        model=CHAT_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT)
-    )
-    return {
-        "answer": response.text.strip(),
-        "sources": sources,
-        "has_knowledge": True
+    payload = {
+        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+        "contents": [{"parts": [{"text": prompt}]}]
     }
+    resp = requests.post(CHAT_URL, params={"key": _api_key}, json=payload, timeout=60)
+    resp.raise_for_status()
+    answer = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+    return {"answer": answer, "sources": sources, "has_knowledge": True}

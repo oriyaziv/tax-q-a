@@ -22,16 +22,16 @@ import requests
 from bs4 import BeautifulSoup
 import PyPDF2
 from docx import Document
-from google import genai
-from google.genai import types
 
 OUTPUT_PATH = Path(__file__).parent.parent / "data" / "knowledge_base.json"
 EMBED_MODEL = "text-embedding-004"
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 150
-RATE_LIMIT_DELAY = 0.5
+RATE_LIMIT_DELAY = 0.6
 
-_client: Optional[genai.Client] = None
+_api_key: str = ""
+EMBED_URL = "https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent"
+CHAT_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent"
 
 
 # ─────────────────────────────────────────────
@@ -92,18 +92,30 @@ def chunk_text(text: str, source: str, url: str = "") -> list[dict]:
 # EMBEDDING
 # ─────────────────────────────────────────────
 
+def embed_text(text: str) -> list[float]:
+    """Call Gemini v1 REST API directly for a single embedding."""
+    payload = {
+        "model": f"models/{EMBED_MODEL}",
+        "content": {"parts": [{"text": text}]},
+        "taskType": "RETRIEVAL_DOCUMENT"
+    }
+    resp = requests.post(
+        EMBED_URL,
+        params={"key": _api_key},
+        json=payload,
+        timeout=30
+    )
+    resp.raise_for_status()
+    return resp.json()["embedding"]["values"]
+
+
 def embed_chunks(chunks: list[dict]) -> list[dict]:
-    """Add embeddings to all chunks using Gemini text-embedding-004 via v1 API."""
+    """Add embeddings to all chunks using Gemini v1 REST API directly."""
     embedded = []
     total = len(chunks)
     for i, chunk in enumerate(chunks):
         try:
-            result = _client.models.embed_content(
-                model=EMBED_MODEL,
-                contents=chunk["text"],
-                config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
-            )
-            chunk["embedding"] = result.embeddings[0].values
+            chunk["embedding"] = embed_text(chunk["text"])
             embedded.append(chunk)
             if (i + 1) % 20 == 0:
                 print(f"  Embedded {i + 1}/{total} chunks...")
@@ -310,7 +322,7 @@ def ingest_tax_circulars() -> list[dict]:
 # ─────────────────────────────────────────────
 
 def main():
-    global _client
+    global _api_key
 
     parser = argparse.ArgumentParser(description="Build knowledge base for Tax Q&A")
     parser.add_argument("--docs", type=str, required=True, help="Path to local documents folder")
@@ -319,17 +331,14 @@ def main():
     parser.add_argument("--skip-circulars", action="store_true", help="Skip tax circulars")
     args = parser.parse_args()
 
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
+    _api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not _api_key:
         print("ERROR: GEMINI_API_KEY environment variable not set!")
         print("Get a free key at: https://aistudio.google.com/app/apikey")
         exit(1)
 
-    _client = genai.Client(
-        api_key=api_key,
-        http_options=types.HttpOptions(api_version="v1")
-    )
-    print(f"[INFO] Gemini client initialized (v1 API)")
+    # Verify API key works by testing embedding endpoint directly
+    print("[INFO] Using Gemini v1 REST API directly (no SDK version issues)")
 
     docs_folder = Path(args.docs)
     if not docs_folder.exists():

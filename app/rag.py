@@ -2,6 +2,7 @@
 RAG (Retrieval-Augmented Generation) engine
 Uses Gemini v1 REST API directly - bypasses SDK version issues
 """
+import base64
 import json
 import os
 import numpy as np
@@ -60,7 +61,11 @@ def _load_knowledge_base():
         data = json.load(f)
     _knowledge_base = data.get("chunks", [])
     if _knowledge_base:
-        _embeddings_matrix = np.array([c["embedding"] for c in _knowledge_base], dtype=np.float32)
+        def _decode(e):
+            if isinstance(e, str):  # base64 float16
+                return np.frombuffer(base64.b64decode(e), dtype=np.float16).astype(np.float32)
+            return np.array(e, dtype=np.float32)  # legacy plain list
+        _embeddings_matrix = np.array([_decode(c["embedding"]) for c in _knowledge_base], dtype=np.float32)
         norms = np.linalg.norm(_embeddings_matrix, axis=1, keepdims=True)
         norms = np.where(norms == 0, 1, norms)
         _embeddings_matrix = _embeddings_matrix / norms

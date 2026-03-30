@@ -11,12 +11,15 @@ Usage:
     python scripts/ingest.py --docs "D:\אוריה\יצירת אפליקציות קלוד\קלוד קוד מס הכנסה"
 """
 import argparse
+import base64
 import json
 import os
 import re
 import time
 from pathlib import Path
 from typing import Optional
+
+import numpy as np
 
 import requests
 from bs4 import BeautifulSoup
@@ -146,7 +149,10 @@ def embed_chunks(chunks: list[dict]) -> list[dict]:
     total = len(chunks)
     for i, chunk in enumerate(chunks):
         try:
-            chunk["embedding"] = embed_text(chunk["text"])
+            raw = embed_text(chunk["text"])
+            # Store as float16 base64 to reduce file size (~15x smaller)
+            arr = np.array(raw, dtype=np.float16)
+            chunk["embedding"] = base64.b64encode(arr.tobytes()).decode("ascii")
             embedded.append(chunk)
             if (i + 1) % 20 == 0:
                 print(f"  Embedded {i + 1}/{total} chunks...")

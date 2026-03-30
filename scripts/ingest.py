@@ -24,14 +24,45 @@ import PyPDF2
 from docx import Document
 
 OUTPUT_PATH = Path(__file__).parent.parent / "data" / "knowledge_base.json"
-EMBED_MODEL = "text-embedding-004"
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 150
 RATE_LIMIT_DELAY = 0.6
+BASE = "https://generativelanguage.googleapis.com"
 
 _api_key: str = ""
-EMBED_URL = "https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent"
-CHAT_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent"
+_embed_model: str = ""   # determined at runtime
+
+# Candidate embedding models in preference order (tried against both v1 and v1beta)
+EMBED_CANDIDATES = [
+    "text-embedding-004",
+    "gemini-embedding-exp-03-07",
+    "embedding-001",
+]
+
+
+def detect_embed_model() -> str:
+    """Try each candidate model on v1 then v1beta and return the first that works."""
+    for version in ("v1", "v1beta"):
+        for model in EMBED_CANDIDATES:
+            url = f"{BASE}/{version}/models/{model}:embedContent"
+            try:
+                resp = requests.post(
+                    url,
+                    params={"key": _api_key},
+                    json={"model": f"models/{model}",
+                          "content": {"parts": [{"text": "test"}]}},
+                    timeout=15
+                )
+                if resp.status_code == 200:
+                    print(f"[INFO] Using embedding model: {model} (API {version})")
+                    # store version+model as embed URL
+                    return f"{BASE}/{version}/models/{model}:embedContent"
+            except Exception:
+                pass
+    raise RuntimeError(
+        "No working embedding model found. "
+        "Please verify your GEMINI_API_KEY is valid and the Generative Language API is enabled."
+    )
 
 
 # ─────────────────────────────────────────────
@@ -93,14 +124,15 @@ def chunk_text(text: str, source: str, url: str = "") -> list[dict]:
 # ─────────────────────────────────────────────
 
 def embed_text(text: str) -> list[float]:
-    """Call Gemini v1 REST API directly for a single embedding."""
+    """Call Gemini REST API directly for a single embedding."""
+    model_name = _embed_model.split("/models/")[1].split(":")[0]
     payload = {
-        "model": f"models/{EMBED_MODEL}",
+        "model": f"models/{model_name}",
         "content": {"parts": [{"text": text}]},
         "taskType": "RETRIEVAL_DOCUMENT"
     }
     resp = requests.post(
-        EMBED_URL,
+        _embed_model,
         params={"key": _api_key},
         json=payload,
         timeout=30
@@ -322,7 +354,7 @@ def ingest_tax_circulars() -> list[dict]:
 # ─────────────────────────────────────────────
 
 def main():
-    global _api_key
+    global _api_key, _embed_model
 
     parser = argparse.ArgumentParser(description="Build knowledge base for Tax Q&A")
     parser.add_argument("--docs", type=str, required=True, help="Path to local documents folder")
@@ -337,8 +369,8 @@ def main():
         print("Get a free key at: https://aistudio.google.com/app/apikey")
         exit(1)
 
-    # Verify API key works by testing embedding endpoint directly
-    print("[INFO] Using Gemini v1 REST API directly (no SDK version issues)")
+    print("[INFO] Detecting available embedding model...")
+    _embed_model = detect_embed_model()
 
     docs_folder = Path(args.docs)
     if not docs_folder.exists():

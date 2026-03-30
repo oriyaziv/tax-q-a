@@ -11,20 +11,40 @@ from typing import Optional
 
 KNOWLEDGE_BASE_PATH = Path(__file__).parent.parent / "data" / "knowledge_base.json"
 TOP_K = 8
-
-EMBED_URL = "https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent"
-CHAT_URL  = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent"
+BASE = "https://generativelanguage.googleapis.com"
+EMBED_CANDIDATES = ["text-embedding-004", "gemini-embedding-exp-03-07", "embedding-001"]
+CHAT_URL = f"{BASE}/v1/models/gemini-1.5-flash:generateContent"
 
 _knowledge_base: list[dict] = []
 _embeddings_matrix: Optional[np.ndarray] = None
 _api_key: str = ""
+_embed_url: str = ""
+
+
+def _detect_embed_url() -> str:
+    for version in ("v1", "v1beta"):
+        for model in EMBED_CANDIDATES:
+            url = f"{BASE}/{version}/models/{model}:embedContent"
+            try:
+                resp = requests.post(
+                    url, params={"key": _api_key},
+                    json={"model": f"models/{model}", "content": {"parts": [{"text": "test"}]}},
+                    timeout=10
+                )
+                if resp.status_code == 200:
+                    print(f"[RAG] Embedding: {model} ({version})")
+                    return url
+            except Exception:
+                pass
+    raise RuntimeError("No working Gemini embedding model found. Check your API key.")
 
 
 def init():
-    global _api_key
+    global _api_key, _embed_url
     _api_key = os.environ.get("GEMINI_API_KEY", "")
     if not _api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable is not set")
+    _embed_url = _detect_embed_url()
     _load_knowledge_base()
     print(f"[RAG] Loaded {len(_knowledge_base)} chunks from knowledge base")
 
@@ -47,12 +67,13 @@ def _load_knowledge_base():
 
 
 def _embed_query(text: str) -> np.ndarray:
+    model_name = _embed_url.split("/models/")[1].split(":")[0]
     payload = {
-        "model": "models/text-embedding-004",
+        "model": f"models/{model_name}",
         "content": {"parts": [{"text": text}]},
         "taskType": "RETRIEVAL_QUERY"
     }
-    resp = requests.post(EMBED_URL, params={"key": _api_key}, json=payload, timeout=30)
+    resp = requests.post(_embed_url, params={"key": _api_key}, json=payload, timeout=30)
     resp.raise_for_status()
     vec = np.array(resp.json()["embedding"]["values"], dtype=np.float32)
     norm = np.linalg.norm(vec)

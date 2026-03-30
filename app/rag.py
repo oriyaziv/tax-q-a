@@ -25,7 +25,10 @@ def init():
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable is not set")
-    _client = genai.Client(api_key=api_key)
+    _client = genai.Client(
+        api_key=api_key,
+        http_options=types.HttpOptions(api_version="v1")
+    )
     _load_knowledge_base()
     print(f"[RAG] Loaded {len(_knowledge_base)} chunks from knowledge base")
 

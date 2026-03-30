@@ -325,8 +325,11 @@ def main():
         print("Get a free key at: https://aistudio.google.com/app/apikey")
         exit(1)
 
-    _client = genai.Client(api_key=api_key)
-    print(f"[INFO] Gemini client initialized (using v1 API)")
+    _client = genai.Client(
+        api_key=api_key,
+        http_options=types.HttpOptions(api_version="v1")
+    )
+    print(f"[INFO] Gemini client initialized (v1 API)")
 
     docs_folder = Path(args.docs)
     if not docs_folder.exists():

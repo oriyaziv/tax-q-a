@@ -256,6 +256,11 @@ async def uploaded_sources():
     return {"sources": get_uploaded_sources()}
 
 
+@app.get("/api/debug")
+async def debug():
+    return rag.get_debug_info()
+
+
 @app.get("/api/history")
 async def get_chat_history():
     return {"history": get_history(50)}

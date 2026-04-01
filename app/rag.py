@@ -14,13 +14,12 @@ from typing import Optional
 KNOWLEDGE_BASE_PATH = Path(__file__).parent.parent / "data" / "knowledge_base.json"
 TOP_K = 8
 BASE = "https://generativelanguage.googleapis.com"
-EMBED_CANDIDATES = ["gemini-embedding-001", "gemini-embedding-2-preview"]
+
+EMBED_CANDIDATES = ["gemini-embedding-001", "gemini-embedding-2-preview", "embedding-001"]
 CHAT_CANDIDATES = [
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-001",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-001",
-    "gemini-1.5-pro",
+    "gemini-2.0-flash", "gemini-2.0-flash-001", "gemini-2.0-flash-lite",
+    "gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-1.5-flash-latest",
+    "gemini-1.5-pro", "gemini-1.5-pro-001", "gemini-1.5-pro-latest",
     "gemini-pro",
 ]
 
@@ -29,55 +28,118 @@ _embeddings_matrix: Optional[np.ndarray] = None
 _api_key: str = ""
 _embed_url: str = ""
 _chat_url: str = ""
+_available_models: list[str] = []
 
 
-def _detect_embed_url() -> str:
-    for version in ("v1", "v1beta"):
-        for model in EMBED_CANDIDATES:
+def _list_models() -> list[str]:
+    """Fetch available model names from the API."""
+    for version in ("v1beta", "v1"):
+        try:
+            resp = requests.get(
+                f"{BASE}/{version}/models",
+                params={"key": _api_key},
+                timeout=15
+            )
+            if resp.status_code == 200:
+                models = resp.json().get("models", [])
+                names = [m["name"].split("/")[-1] for m in models]
+                print(f"[RAG] Available models ({version}): {names}")
+                return names
+        except Exception as e:
+            print(f"[RAG] ListModels failed ({version}): {e}")
+    return []
+
+
+def _detect_embed_url(available: list[str]) -> str:
+    # Try models that are in the available list first
+    ordered = [m for m in EMBED_CANDIDATES if m in available] + \
+              [m for m in EMBED_CANDIDATES if m not in available]
+    for model in ordered:
+        for version in ("v1", "v1beta"):
             url = f"{BASE}/{version}/models/{model}:embedContent"
             try:
                 resp = requests.post(
                     url, params={"key": _api_key},
                     json={"model": f"models/{model}", "content": {"parts": [{"text": "test"}]}},
-                    timeout=10
+                    timeout=15
                 )
                 if resp.status_code == 200:
-                    print(f"[RAG] Embedding: {model} ({version})")
+                    print(f"[RAG] Embedding model: {model} ({version})")
                     return url
-            except Exception:
-                pass
-    raise RuntimeError("No working Gemini embedding model found. Check your API key.")
+                else:
+                    print(f"[RAG] Embed {model} ({version}): HTTP {resp.status_code}")
+            except Exception as e:
+                print(f"[RAG] Embed {model} ({version}): {e}")
+    raise RuntimeError("No working Gemini embedding model found.")
 
 
-def _detect_chat_url() -> str:
-    for version in ("v1beta", "v1"):
-        for model in CHAT_CANDIDATES:
+def _detect_chat_url(available: list[str]) -> str:
+    # Allow override via env var
+    override = os.environ.get("GEMINI_CHAT_MODEL", "")
+    if override:
+        url = f"{BASE}/v1beta/models/{override}:generateContent"
+        print(f"[RAG] Chat model (override): {override}")
+        return url
+
+    # Try models that are in the available list first
+    ordered = [m for m in CHAT_CANDIDATES if m in available] + \
+              [m for m in CHAT_CANDIDATES if m not in available]
+    for model in ordered:
+        for version in ("v1beta", "v1"):
             url = f"{BASE}/{version}/models/{model}:generateContent"
             try:
                 resp = requests.post(
                     url, params={"key": _api_key},
-                    json={"contents": [{"parts": [{"text": "hi"}]}]},
-                    timeout=10
+                    json={"contents": [{"parts": [{"text": "שלום"}]}]},
+                    timeout=20
                 )
                 if resp.status_code == 200:
                     print(f"[RAG] Chat model: {model} ({version})")
                     return url
-            except Exception:
-                pass
-    raise RuntimeError("No working Gemini chat model found. Check your API key.")
+                else:
+                    print(f"[RAG] Chat {model} ({version}): HTTP {resp.status_code}")
+            except Exception as e:
+                print(f"[RAG] Chat {model} ({version}): {e}")
+    raise RuntimeError("No working Gemini chat model found.")
 
 
 def init():
-    global _api_key, _embed_url, _chat_url
+    global _api_key, _embed_url, _chat_url, _available_models
     _api_key = os.environ.get("GEMINI_API_KEY", "")
     if not _api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable is not set")
-    # Load knowledge base first - independent of API connectivity
+
+    # Load knowledge base first (no API needed)
     _load_knowledge_base()
     print(f"[RAG] Loaded {len(_knowledge_base)} chunks from knowledge base")
-    # Then detect API models
-    _embed_url = _detect_embed_url()
-    _chat_url = _detect_chat_url()
+
+    # Get available models list (1 API call)
+    _available_models = _list_models()
+
+    # Detect working models
+    try:
+        _embed_url = _detect_embed_url(_available_models)
+    except RuntimeError as e:
+        print(f"[RAG] WARNING: {e}")
+
+    try:
+        _chat_url = _detect_chat_url(_available_models)
+    except RuntimeError as e:
+        print(f"[RAG] WARNING: {e}")
+
+    print(f"[RAG] embed_url={_embed_url}")
+    print(f"[RAG] chat_url={_chat_url}")
+
+
+def get_debug_info() -> dict:
+    return {
+        "chunks_loaded": len(_knowledge_base),
+        "embed_url": _embed_url,
+        "chat_url": _chat_url,
+        "available_models": _available_models,
+        "embed_ready": bool(_embed_url),
+        "chat_ready": bool(_chat_url),
+    }
 
 
 def _load_knowledge_base():
@@ -101,9 +163,9 @@ def _rebuild_matrix():
         return
 
     def _decode(e):
-        if isinstance(e, str):  # base64 float16
+        if isinstance(e, str):
             return np.frombuffer(base64.b64decode(e), dtype=np.float16).astype(np.float32)
-        return np.array(e, dtype=np.float32)  # legacy plain list
+        return np.array(e, dtype=np.float32)
 
     mat = np.array([_decode(c["embedding"]) for c in _knowledge_base], dtype=np.float32)
     norms = np.linalg.norm(mat, axis=1, keepdims=True)
@@ -112,7 +174,6 @@ def _rebuild_matrix():
 
 
 def add_preembedded_chunks(chunks: list[dict]):
-    """Add already-embedded chunks to memory (called on startup from DB)."""
     if not chunks:
         return
     for chunk in chunks:
@@ -122,7 +183,6 @@ def add_preembedded_chunks(chunks: list[dict]):
 
 
 def embed_and_add_chunks(chunks: list[dict]) -> list[dict]:
-    """Embed new text chunks and add to memory. Returns chunks with embeddings."""
     embedded = []
     for i, chunk in enumerate(chunks):
         vec_raw = _embed_doc(chunk["text"])
@@ -131,7 +191,7 @@ def embed_and_add_chunks(chunks: list[dict]) -> list[dict]:
         c["embedding"] = base64.b64encode(arr.tobytes()).decode("ascii")
         embedded.append(c)
         if i > 0 and i % 10 == 0:
-            time.sleep(0.5)  # rate limit
+            time.sleep(0.5)
     for chunk in embedded:
         _knowledge_base.append(chunk)
     _rebuild_matrix()
@@ -192,11 +252,13 @@ SYSTEM_PROMPT = """אתה עוזר מקצועי לעובדי רשות המיסי
 
 def answer_question(question: str) -> dict:
     if not _knowledge_base:
-        return {
-            "answer": "מאגר הידע טרם נטען. אנא פנה למנהל המערכת.",
-            "sources": [],
-            "has_knowledge": False
-        }
+        return {"answer": "מאגר הידע טרם נטען. אנא פנה למנהל המערכת.", "sources": [], "has_knowledge": False}
+
+    if not _embed_url:
+        return {"answer": "שגיאת הגדרה: מודל ה-embedding לא זוהה. בדוק את הלוגים.", "sources": [], "has_knowledge": False}
+
+    if not _chat_url:
+        return {"answer": "שגיאת הגדרה: מודל השיחה לא זוהה. בדוק את הלוגים.", "sources": [], "has_knowledge": False}
 
     query_vec = _embed_query(question)
     chunks = _retrieve(query_vec)

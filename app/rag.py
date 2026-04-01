@@ -15,12 +15,20 @@ KNOWLEDGE_BASE_PATH = Path(__file__).parent.parent / "data" / "knowledge_base.js
 TOP_K = 8
 BASE = "https://generativelanguage.googleapis.com"
 EMBED_CANDIDATES = ["gemini-embedding-001", "gemini-embedding-2-preview"]
-CHAT_URL = f"{BASE}/v1beta/models/gemini-2.0-flash:generateContent"
+CHAT_CANDIDATES = [
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-001",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-001",
+    "gemini-1.5-pro",
+    "gemini-pro",
+]
 
 _knowledge_base: list[dict] = []
 _embeddings_matrix: Optional[np.ndarray] = None
 _api_key: str = ""
 _embed_url: str = ""
+_chat_url: str = ""
 
 
 def _detect_embed_url() -> str:
@@ -41,12 +49,31 @@ def _detect_embed_url() -> str:
     raise RuntimeError("No working Gemini embedding model found. Check your API key.")
 
 
+def _detect_chat_url() -> str:
+    for version in ("v1beta", "v1"):
+        for model in CHAT_CANDIDATES:
+            url = f"{BASE}/{version}/models/{model}:generateContent"
+            try:
+                resp = requests.post(
+                    url, params={"key": _api_key},
+                    json={"contents": [{"parts": [{"text": "hi"}]}]},
+                    timeout=10
+                )
+                if resp.status_code == 200:
+                    print(f"[RAG] Chat model: {model} ({version})")
+                    return url
+            except Exception:
+                pass
+    raise RuntimeError("No working Gemini chat model found. Check your API key.")
+
+
 def init():
-    global _api_key, _embed_url
+    global _api_key, _embed_url, _chat_url
     _api_key = os.environ.get("GEMINI_API_KEY", "")
     if not _api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable is not set")
     _embed_url = _detect_embed_url()
+    _chat_url = _detect_chat_url()
     _load_knowledge_base()
     print(f"[RAG] Loaded {len(_knowledge_base)} chunks from knowledge base")
 
@@ -194,7 +221,7 @@ def answer_question(question: str) -> dict:
         "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
         "contents": [{"parts": [{"text": prompt}]}]
     }
-    resp = requests.post(CHAT_URL, params={"key": _api_key}, json=payload, timeout=60)
+    resp = requests.post(_chat_url, params={"key": _api_key}, json=payload, timeout=60)
     resp.raise_for_status()
     answer = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
 

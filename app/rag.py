@@ -17,10 +17,9 @@ BASE = "https://generativelanguage.googleapis.com"
 
 EMBED_CANDIDATES = ["gemini-embedding-001", "gemini-embedding-2-preview", "embedding-001"]
 CHAT_CANDIDATES = [
-    "gemini-2.0-flash", "gemini-2.0-flash-001", "gemini-2.0-flash-lite",
-    "gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-1.5-flash-latest",
-    "gemini-1.5-pro", "gemini-1.5-pro-001", "gemini-1.5-pro-latest",
-    "gemini-pro",
+    "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-001",
+    "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-flash-001",
+    "gemini-1.5-pro", "gemini-pro",
 ]
 
 _knowledge_base: list[dict] = []
@@ -29,10 +28,11 @@ _api_key: str = ""
 _embed_url: str = ""
 _chat_url: str = ""
 _available_models: list[str] = []
+_model_methods: dict = {}
 
 
-def _list_models() -> list[str]:
-    """Fetch available model names from the API."""
+def _list_models() -> tuple[list[str], dict]:
+    """Fetch available models. Returns (name_list, methods_dict)."""
     for version in ("v1beta", "v1"):
         try:
             resp = requests.get(
@@ -43,18 +43,26 @@ def _list_models() -> list[str]:
             if resp.status_code == 200:
                 models = resp.json().get("models", [])
                 names = [m["name"].split("/")[-1] for m in models]
-                print(f"[RAG] Available models ({version}): {names}")
-                return names
+                methods = {
+                    m["name"].split("/")[-1]: m.get("supportedGenerationMethods", [])
+                    for m in models
+                }
+                print(f"[RAG] Found {len(names)} models via {version}")
+                return names, methods
         except Exception as e:
             print(f"[RAG] ListModels failed ({version}): {e}")
-    return []
+    return [], {}
 
 
-def _detect_embed_url(available: list[str]) -> str:
-    # Try models that are in the available list first
-    ordered = [m for m in EMBED_CANDIDATES if m in available] + \
-              [m for m in EMBED_CANDIDATES if m not in available]
-    for model in ordered:
+def _detect_embed_url(available: list[str], methods: dict) -> str:
+    for model in EMBED_CANDIDATES:
+        if model in available:
+            if "embedContent" in methods.get(model, []) or not methods:
+                url = f"{BASE}/v1beta/models/{model}:embedContent"
+                print(f"[RAG] Embedding model: {model}")
+                return url
+    # Fallback: test each candidate
+    for model in EMBED_CANDIDATES:
         for version in ("v1", "v1beta"):
             url = f"{BASE}/{version}/models/{model}:embedContent"
             try:
@@ -64,42 +72,37 @@ def _detect_embed_url(available: list[str]) -> str:
                     timeout=15
                 )
                 if resp.status_code == 200:
-                    print(f"[RAG] Embedding model: {model} ({version})")
+                    print(f"[RAG] Embedding model (tested): {model} ({version})")
                     return url
-                else:
-                    print(f"[RAG] Embed {model} ({version}): HTTP {resp.status_code}")
-            except Exception as e:
-                print(f"[RAG] Embed {model} ({version}): {e}")
+            except Exception:
+                pass
     raise RuntimeError("No working Gemini embedding model found.")
 
 
-def _detect_chat_url(available: list[str]) -> str:
-    # Allow override via env var
+def _detect_chat_url(available: list[str], methods: dict) -> str:
+    # Allow manual override via env var
     override = os.environ.get("GEMINI_CHAT_MODEL", "")
     if override:
         url = f"{BASE}/v1beta/models/{override}:generateContent"
-        print(f"[RAG] Chat model (override): {override}")
+        print(f"[RAG] Chat model (env override): {override}")
         return url
 
-    # Try models that are in the available list first
-    ordered = [m for m in CHAT_CANDIDATES if m in available] + \
-              [m for m in CHAT_CANDIDATES if m not in available]
-    for model in ordered:
-        for version in ("v1beta", "v1"):
-            url = f"{BASE}/{version}/models/{model}:generateContent"
-            try:
-                resp = requests.post(
-                    url, params={"key": _api_key},
-                    json={"contents": [{"parts": [{"text": "שלום"}]}]},
-                    timeout=20
-                )
-                if resp.status_code == 200:
-                    print(f"[RAG] Chat model: {model} ({version})")
-                    return url
-                else:
-                    print(f"[RAG] Chat {model} ({version}): HTTP {resp.status_code}")
-            except Exception as e:
-                print(f"[RAG] Chat {model} ({version}): {e}")
+    # Use supportedGenerationMethods from ListModels - no test calls needed
+    for model in CHAT_CANDIDATES:
+        if model in available:
+            model_methods = methods.get(model, [])
+            if "generateContent" in model_methods or not model_methods:
+                url = f"{BASE}/v1beta/models/{model}:generateContent"
+                print(f"[RAG] Chat model: {model}")
+                return url
+
+    # Last resort: pick first available model that has generateContent
+    for name, model_methods in methods.items():
+        if "generateContent" in model_methods and "embedding" not in name.lower():
+            url = f"{BASE}/v1beta/models/{name}:generateContent"
+            print(f"[RAG] Chat model (fallback): {name}")
+            return url
+
     raise RuntimeError("No working Gemini chat model found.")
 
 
@@ -113,17 +116,17 @@ def init():
     _load_knowledge_base()
     print(f"[RAG] Loaded {len(_knowledge_base)} chunks from knowledge base")
 
-    # Get available models list (1 API call)
-    _available_models = _list_models()
+    # Get available models list (1 API call, no quota used)
+    _available_models, _model_methods = _list_models()
 
-    # Detect working models
+    # Detect working models using supportedGenerationMethods (no test calls)
     try:
-        _embed_url = _detect_embed_url(_available_models)
+        _embed_url = _detect_embed_url(_available_models, _model_methods)
     except RuntimeError as e:
         print(f"[RAG] WARNING: {e}")
 
     try:
-        _chat_url = _detect_chat_url(_available_models)
+        _chat_url = _detect_chat_url(_available_models, _model_methods)
     except RuntimeError as e:
         print(f"[RAG] WARNING: {e}")
 

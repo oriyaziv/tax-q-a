@@ -72,10 +72,12 @@ def init():
     _api_key = os.environ.get("GEMINI_API_KEY", "")
     if not _api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable is not set")
-    _embed_url = _detect_embed_url()
-    _chat_url = _detect_chat_url()
+    # Load knowledge base first - independent of API connectivity
     _load_knowledge_base()
     print(f"[RAG] Loaded {len(_knowledge_base)} chunks from knowledge base")
+    # Then detect API models
+    _embed_url = _detect_embed_url()
+    _chat_url = _detect_chat_url()
 
 
 def _load_knowledge_base():

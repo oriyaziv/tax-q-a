@@ -677,6 +677,10 @@
     </div>
     <input type="file" id="upload-file-input" accept=".pdf,.docx,.doc,.txt"
            onchange="onFileSelected(this)"/>
+    <div style="margin-top:14px;">
+      <input type="password" id="upload-password" placeholder="סיסמת הגנה (אם הוגדרה)"
+        style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;direction:rtl;font-family:inherit;"/>
+    </div>
     <div class="progress-bar-wrap" id="progress-wrap">
       <div class="progress-bar" id="progress-bar"></div>
     </div>
@@ -986,6 +990,7 @@
 
     const formData = new FormData();
     formData.append('file', selectedFile);
+    formData.append('password', document.getElementById('upload-password').value);
 
     try {
       const res = await fetch('/api/upload', { method: 'POST', body: formData });

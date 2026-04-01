@@ -204,7 +204,11 @@ async def ask_question(req: QuestionRequest):
 
 
 @app.post("/api/upload")
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(file: UploadFile = File(...), password: str = ""):
+    upload_password = os.environ.get("UPLOAD_PASSWORD", "")
+    if upload_password and password != upload_password:
+        raise HTTPException(status_code=401, detail="סיסמה שגויה.")
+
     filename = file.filename or "מסמך"
     suffix = Path(filename).suffix.lower()
 

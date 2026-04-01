@@ -310,6 +310,18 @@ NITUB_KNOWN_PDFS = [
     {"title": "ניתוב שלב א' 2020 - הוראת ביצוע 04/2020", "url": "https://www.gov.il/BlobFolder/policy/inst-04-2020/he/IncomeTax_inst-04-2020.pdf"},
     {"title": "ניתוב שלב א' 2019 - הוראת ביצוע 05/2019", "url": "https://www.gov.il/BlobFolder/policy/inst-05-2019/he/IncomeTax_inst-05-2019.pdf"},
     {"title": "ניתוב שלב א' 2018 - הוראת ביצוע 06/2018", "url": "https://www.gov.il/BlobFolder/policy/inst-06-2018/he/IncomeTax_inst-06-2018.pdf"},
+    {"title": "ניתוב שלב א' 2017 - הוראת ביצוע 05/2017", "url": "https://www.gov.il/BlobFolder/policy/inst-05-2017/he/IncomeTax_inst-05-2017.pdf"},
+    {"title": "ניתוב שלב א' 2016 - הוראת ביצוע 04/2016", "url": "https://www.gov.il/BlobFolder/policy/inst-04-2016/he/IncomeTax_inst-04-2016.pdf"},
+    {"title": "ניתוב שלב א' 2015 - הוראת ביצוע 05/2015", "url": "https://www.gov.il/BlobFolder/policy/inst-05-2015/he/IncomeTax_inst-05-2015.pdf"},
+    {"title": "ניתוב שלב א' 2014 - הוראת ביצוע 04/2014", "url": "https://www.gov.il/BlobFolder/policy/inst-04-2014/he/IncomeTax_inst-04-2014.pdf"},
+    {"title": "ניתוב שלב א' 2013 - הוראת ביצוע 03/2013", "url": "https://www.gov.il/BlobFolder/policy/inst-03-2013/he/IncomeTax_inst-03-2013.pdf"},
+    {"title": "ניתוב שלב א' 2012 - הוראת ביצוע 04/2012", "url": "https://www.gov.il/BlobFolder/policy/inst-04-2012/he/IncomeTax_inst-04-2012.pdf"},
+    {"title": "ניתוב שלב א' 2011 - הוראת ביצוע 03/2011", "url": "https://www.gov.il/BlobFolder/policy/inst-03-2011/he/IncomeTax_inst-03-2011.pdf"},
+    {"title": "ניתוב שלב א' 2010 - הוראת ביצוע 04/2010", "url": "https://www.gov.il/BlobFolder/policy/inst-04-2010/he/IncomeTax_inst-04-2010.pdf"},
+    {"title": "ניתוב שלב א' 2009 - הוראת ביצוע 03/2009", "url": "https://www.gov.il/BlobFolder/policy/inst-03-2009/he/IncomeTax_inst-03-2009.pdf"},
+    {"title": "ניתוב שלב א' 2008 - הוראת ביצוע 04/2008", "url": "https://www.gov.il/BlobFolder/policy/inst-04-2008/he/IncomeTax_inst-04-2008.pdf"},
+    {"title": "ניתוב שלב א' 2007 - הוראת ביצוע 03/2007", "url": "https://www.gov.il/BlobFolder/policy/inst-03-2007/he/IncomeTax_inst-03-2007.pdf"},
+    {"title": "ניתוב שלב א' 2006 - הוראת ביצוע 04/2006", "url": "https://www.gov.il/BlobFolder/policy/inst-04-2006/he/IncomeTax_inst-04-2006.pdf"},
     {"title": "ניתוב שלב א' - ארכיון הוראות ביצוע", "url": "https://claltax.com/הוראות-ביצוע-מס-הכנסה/"},
 ]
 

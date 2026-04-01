@@ -5,6 +5,7 @@ Uses Gemini v1 REST API directly - bypasses SDK version issues
 import base64
 import json
 import os
+import time
 import numpy as np
 import requests
 from pathlib import Path
@@ -61,14 +62,63 @@ def _load_knowledge_base():
         data = json.load(f)
     _knowledge_base = data.get("chunks", [])
     if _knowledge_base:
-        def _decode(e):
-            if isinstance(e, str):  # base64 float16
-                return np.frombuffer(base64.b64decode(e), dtype=np.float16).astype(np.float32)
-            return np.array(e, dtype=np.float32)  # legacy plain list
-        _embeddings_matrix = np.array([_decode(c["embedding"]) for c in _knowledge_base], dtype=np.float32)
-        norms = np.linalg.norm(_embeddings_matrix, axis=1, keepdims=True)
-        norms = np.where(norms == 0, 1, norms)
-        _embeddings_matrix = _embeddings_matrix / norms
+        _rebuild_matrix()
+
+
+def _rebuild_matrix():
+    global _embeddings_matrix
+    if not _knowledge_base:
+        _embeddings_matrix = None
+        return
+
+    def _decode(e):
+        if isinstance(e, str):  # base64 float16
+            return np.frombuffer(base64.b64decode(e), dtype=np.float16).astype(np.float32)
+        return np.array(e, dtype=np.float32)  # legacy plain list
+
+    mat = np.array([_decode(c["embedding"]) for c in _knowledge_base], dtype=np.float32)
+    norms = np.linalg.norm(mat, axis=1, keepdims=True)
+    norms = np.where(norms == 0, 1, norms)
+    _embeddings_matrix = mat / norms
+
+
+def add_preembedded_chunks(chunks: list[dict]):
+    """Add already-embedded chunks to memory (called on startup from DB)."""
+    if not chunks:
+        return
+    for chunk in chunks:
+        _knowledge_base.append(chunk)
+    _rebuild_matrix()
+    print(f"[RAG] Added {len(chunks)} uploaded chunks from DB")
+
+
+def embed_and_add_chunks(chunks: list[dict]) -> list[dict]:
+    """Embed new text chunks and add to memory. Returns chunks with embeddings."""
+    embedded = []
+    for i, chunk in enumerate(chunks):
+        vec_raw = _embed_doc(chunk["text"])
+        arr = np.array(vec_raw, dtype=np.float16)
+        c = dict(chunk)
+        c["embedding"] = base64.b64encode(arr.tobytes()).decode("ascii")
+        embedded.append(c)
+        if i > 0 and i % 10 == 0:
+            time.sleep(0.5)  # rate limit
+    for chunk in embedded:
+        _knowledge_base.append(chunk)
+    _rebuild_matrix()
+    return embedded
+
+
+def _embed_doc(text: str) -> list[float]:
+    model_name = _embed_url.split("/models/")[1].split(":")[0]
+    payload = {
+        "model": f"models/{model_name}",
+        "content": {"parts": [{"text": text}]},
+        "taskType": "RETRIEVAL_DOCUMENT"
+    }
+    resp = requests.post(_embed_url, params={"key": _api_key}, json=payload, timeout=30)
+    resp.raise_for_status()
+    return resp.json()["embedding"]["values"]
 
 
 def _embed_query(text: str) -> np.ndarray:

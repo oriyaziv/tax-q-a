@@ -438,6 +438,112 @@
       30% { transform: translateY(-6px); opacity: 1; }
     }
 
+    /* ─── UPLOAD MODAL ─── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: white;
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 420px;
+      max-width: 95vw;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      direction: rtl;
+    }
+
+    .modal h3 { font-size: 17px; color: var(--primary); margin-bottom: 16px; }
+
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      color: var(--text-muted);
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--primary-light);
+      background: #f0f4fb;
+    }
+    .upload-zone .upload-icon { font-size: 36px; margin-bottom: 10px; }
+    .upload-zone p { font-size: 13.5px; line-height: 1.6; }
+    .upload-zone small { font-size: 11.5px; color: #aab; }
+
+    #upload-file-input { display: none; }
+
+    .upload-status {
+      margin-top: 14px;
+      font-size: 13px;
+      min-height: 20px;
+      color: var(--text-muted);
+    }
+    .upload-status.success { color: #2e7d32; font-weight: 600; }
+    .upload-status.error   { color: #c62828; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary:hover { background: var(--primary-light); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: white;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .btn-secondary:hover { background: var(--bg); }
+
+    .progress-bar-wrap {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      margin-top: 12px;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-bar-wrap.visible { display: block; }
+    .progress-bar {
+      height: 100%;
+      background: var(--primary-light);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.3s;
+      animation: progress-anim 1.5s infinite;
+    }
+    @keyframes progress-anim {
+      0%   { width: 10%; }
+      50%  { width: 80%; }
+      100% { width: 95%; }
+    }
+
     /* ─── RESPONSIVE ─── */
     @media (max-width: 768px) {
       .main-layout { flex-direction: column; padding: 12px; }
@@ -457,8 +563,11 @@
     </div>
   </div>
   <div class="header-actions">
+    <button class="btn-icon" onclick="openUploadModal()" title="העלה מסמך">
+      <span>&#128196;</span> הוסף מסמך
+    </button>
     <button class="btn-icon" onclick="toggleHistory()" title="היסטוריית שאלות">
-      <span>&#128196;</span> היסטוריה
+      <span>&#128203;</span> היסטוריה
     </button>
     <button class="btn-icon" onclick="clearChat()" title="נקה שיחה">
       <span>&#128465;</span> נקה
@@ -553,9 +662,36 @@
   </div>
 </div>
 
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="upload-modal" onclick="closeIfOverlay(event)">
+  <div class="modal">
+    <h3>&#128196; הוספת מסמך מקצועי</h3>
+    <div class="upload-zone" id="upload-zone"
+         onclick="document.getElementById('upload-file-input').click()"
+         ondragover="onDragOver(event)"
+         ondragleave="onDragLeave(event)"
+         ondrop="onDrop(event)">
+      <div class="upload-icon">&#128196;</div>
+      <p>לחץ לבחירת קובץ או גרור לכאן</p>
+      <small>PDF, Word (.docx), TXT &nbsp;|&nbsp; עד 20MB</small>
+    </div>
+    <input type="file" id="upload-file-input" accept=".pdf,.docx,.doc,.txt"
+           onchange="onFileSelected(this)"/>
+    <div class="progress-bar-wrap" id="progress-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="upload-status" id="upload-status"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeUploadModal()">סגור</button>
+      <button class="btn-primary" id="upload-btn" onclick="doUpload()" disabled>העלה</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ─── STATE ───
   let isLoading = false;
+  let selectedFile = null;
 
   // ─── INIT ───
   window.addEventListener('DOMContentLoaded', () => {
@@ -784,6 +920,96 @@
         hour:'2-digit', minute:'2-digit'
       });
     } catch { return iso; }
+  }
+
+  // ─── UPLOAD MODAL ───
+  function openUploadModal() {
+    selectedFile = null;
+    document.getElementById('upload-btn').disabled = true;
+    document.getElementById('upload-status').textContent = '';
+    document.getElementById('upload-status').className = 'upload-status';
+    document.getElementById('progress-wrap').classList.remove('visible');
+    document.getElementById('upload-file-input').value = '';
+    document.getElementById('upload-zone').querySelector('p').textContent = 'לחץ לבחירת קובץ או גרור לכאן';
+    document.getElementById('upload-modal').classList.add('open');
+  }
+
+  function closeUploadModal() {
+    document.getElementById('upload-modal').classList.remove('open');
+  }
+
+  function closeIfOverlay(e) {
+    if (e.target === document.getElementById('upload-modal')) closeUploadModal();
+  }
+
+  function onFileSelected(input) {
+    if (input.files && input.files[0]) {
+      selectedFile = input.files[0];
+      document.getElementById('upload-zone').querySelector('p').textContent = selectedFile.name;
+      document.getElementById('upload-btn').disabled = false;
+      document.getElementById('upload-status').textContent = '';
+      document.getElementById('upload-status').className = 'upload-status';
+    }
+  }
+
+  function onDragOver(e) {
+    e.preventDefault();
+    document.getElementById('upload-zone').classList.add('drag-over');
+  }
+
+  function onDragLeave(e) {
+    document.getElementById('upload-zone').classList.remove('drag-over');
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    document.getElementById('upload-zone').classList.remove('drag-over');
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      selectedFile = files[0];
+      document.getElementById('upload-zone').querySelector('p').textContent = selectedFile.name;
+      document.getElementById('upload-btn').disabled = false;
+    }
+  }
+
+  async function doUpload() {
+    if (!selectedFile) return;
+
+    const btn = document.getElementById('upload-btn');
+    const status = document.getElementById('upload-status');
+    const progress = document.getElementById('progress-wrap');
+
+    btn.disabled = true;
+    status.textContent = 'מעבד ומוסיף למאגר הידע... (עשוי לקחת כמה שניות)';
+    status.className = 'upload-status';
+    progress.classList.add('visible');
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      progress.classList.remove('visible');
+
+      if (res.ok) {
+        const data = await res.json();
+        status.textContent = data.message;
+        status.className = 'upload-status success';
+        checkStatus();
+        selectedFile = null;
+        btn.disabled = true;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        status.textContent = err.detail || 'שגיאה בהעלאת הקובץ.';
+        status.className = 'upload-status error';
+        btn.disabled = false;
+      }
+    } catch (e) {
+      progress.classList.remove('visible');
+      status.textContent = 'שגיאת רשת. אנא נסה שוב.';
+      status.className = 'upload-status error';
+      btn.disabled = false;
+    }
   }
 </script>
 </body>

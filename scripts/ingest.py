@@ -331,6 +331,45 @@ NITUB_KNOWN_PDFS = [
 ]
 
 # ─────────────────────────────────────────────
+# טפסי 1301 ו-135 (2019-2025)
+# ─────────────────────────────────────────────
+
+TAX_FORMS = [
+    # טופס 1301 - דוח שנתי ליחיד
+    {"title": "טופס 1301 - דוח שנתי 2019", "url": "https://www.gov.il/BlobFolder/service/annual-tax-report-2019/he/Service_Pages_Income_tax_itc1301-2019.pdf"},
+    {"title": "טופס 1301 - דוח שנתי 2020", "url": "https://www.gov.il/blobFolder/service/annual-tax-report-2020/he/Service_Pages_Income_tax_annual-report-2020_1301-2020.pdf"},
+    {"title": "טופס 1301 - דוח שנתי 2021", "url": "https://www.gov.il/blobFolder/service/annual-tax-report-2021/he/Service_Pages_Income_tax_annual-report-2021_1301-2021.pdf"},
+    {"title": "טופס 1301 - דוח שנתי 2022", "url": "https://www.gov.il/blobFolder/service/reporting-and-payment-2022-annual-tax-report-for-individuals/he/1301-2022.pdf"},
+    {"title": "טופס 1301 - דוח שנתי 2023", "url": "https://www.gov.il/BlobFolder/service/reporting-and-payment-2023-annual-tax-report-for-individuals/he/Service_Pages_Income_tax_annual-report-2023_1301-2023.pdf"},
+    {"title": "טופס 1301 - דוח שנתי 2024", "url": "https://www.gov.il/BlobFolder/service/reporting-and-payment-2024-annual-tax-report-for-individuals/he/Service_Pages_Income_tax_annual-report-2024_1301-2024.pdf"},
+    {"title": "טופס 1301 - דוח שנתי 2025", "url": "https://www.gov.il/BlobFolder/service/reporting-and-payment-2025-annual-tax-report-for-individuals/he/Service_Pages_Income_tax_annual-report-2025_1301-2025.pdf"},
+    # טופס 135 - דין וחשבון שנתי מקוצר
+    {"title": "טופס 135 - דוח שנתי מקוצר 2019", "url": "https://www.gov.il/BlobFolder/service/itc135/he/Service_Pages_Income_tax_itc135-19.pdf"},
+    {"title": "טופס 135 - דוח שנתי מקוצר 2020", "url": "https://www.gov.il/BlobFolder/service/itc135/he/Service_Pages_Income_tax_annual-report-2020_135%20-%202020.pdf"},
+    {"title": "טופס 135 - דוח שנתי מקוצר 2021", "url": "https://www.gov.il/BlobFolder/service/itc135/he/Service_Pages_Income_tax_annual-report-2021_135%20-%202021.pdf"},
+    {"title": "טופס 135 - דוח שנתי מקוצר 2022", "url": "https://www.gov.il/BlobFolder/service/itc135/he/Service_Pages_Income_tax_annual-report-2022_annual-singular-report-2022_135-2022.pdf"},
+    {"title": "טופס 135 - דוח שנתי מקוצר 2023", "url": "https://www.gov.il/BlobFolder/service/itc135/he/Service_Pages_Income_tax_annual-report-2023_135-2023.pdf"},
+    {"title": "טופס 135 - דוח שנתי מקוצר 2024", "url": "https://www.gov.il/BlobFolder/service/itc135/he/Service_Pages_Income_tax_annual-report-2024_135-2024.pdf"},
+    {"title": "טופס 135 - דוח שנתי מקוצר 2025", "url": "https://www.gov.il/BlobFolder/service/reporting-and-payment-2025-annual-tax-report-for-individuals/he/Service_Pages_Income_tax_annual-report-2026_itc135-2025.pdf"},
+]
+
+def ingest_tax_forms() -> list[dict]:
+    print(f"\n[4b] Fetching טפסי 1301 ו-135 (2019-2025)...")
+    all_chunks = []
+    for form in TAX_FORMS:
+        print(f"  Fetching: {form['title']}")
+        text = fetch_circular_text(form["url"])
+        if text and len(text.strip()) > 50:
+            chunks = chunk_text(text, source=form["title"], url=form["url"])
+            all_chunks.extend(chunks)
+            print(f"    → {len(chunks)} chunks")
+        else:
+            print(f"    → לא נמצא תוכן (ייתכן שהטופס לא זמין לחילוץ טקסט)")
+        time.sleep(0.5)
+    print(f"  Total forms chunks: {len(all_chunks)}")
+    return all_chunks
+
+# ─────────────────────────────────────────────
 # פקודת מס הכנסה - נבו
 # ─────────────────────────────────────────────
 
@@ -382,6 +421,8 @@ GUIDES_URLS = [
     {"title": "דע זכויותיך וחובותיך - מיסוי מקרקעין", "url": "https://www.gov.il/he/departments/guides/real_estate_taxation_know_your_rights"},
     {"title": "מדריך להגשת דוח שנתי", "url": "https://www.gov.il/he/departments/guides/annual_report_guide"},
     {"title": "מדריך החזר מס לשכירים", "url": "https://www.gov.il/he/departments/guides/tax_refund_guide"},
+    {"title": "טופס 135 - עמוד שירות", "url": "https://www.gov.il/he/service/itc135"},
+    {"title": "טופס 1301 - עמוד שירות 2025", "url": "https://www.gov.il/he/service/reporting-and-payment-2025-annual-tax-report-for-individuals"},
 ]
 
 def ingest_gov_guides() -> list[dict]:
@@ -468,6 +509,7 @@ def main():
     parser.add_argument("--skip-circulars", action="store_true", help="Skip ניתוב שלב א' circulars")
     parser.add_argument("--skip-nevo", action="store_true", help="Skip נבו פקודת מס הכנסה")
     parser.add_argument("--skip-guides", action="store_true", help="Skip gov.il guides")
+    parser.add_argument("--skip-forms", action="store_true", help="Skip טפסי 1301 ו-135")
     args = parser.parse_args()
 
     _api_key = os.environ.get("GEMINI_API_KEY", "")
@@ -538,6 +580,15 @@ def main():
             new_chunks.extend(ingest_gov_guides())
     else:
         print("\n[5] Skipping gov.il guides")
+
+    # Tax forms 1301 & 135
+    if not args.skip_web and not args.skip_forms:
+        if args.append and any("טופס 1301" in s or "טופס 135" in s for s in existing_sources):
+            print("\n[6] Skipping טפסי 1301/135 (already in KB)")
+        else:
+            new_chunks.extend(ingest_tax_forms())
+    else:
+        print("\n[6] Skipping טפסי 1301/135")
 
     if not new_chunks:
         print("\n[INFO] No new chunks to process. Done.")

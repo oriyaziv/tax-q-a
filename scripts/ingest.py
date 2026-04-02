@@ -1,14 +1,19 @@
 """
-Ingestion script - run ONCE locally to build the knowledge base.
+Ingestion script - builds the knowledge base.
 Processes:
   1. Local PDF/Word documents
   2. kolzchut.org.il (income-tax related pages)
   3. Israeli Tax Authority circulars (ניתוב שלב א')
+  4. פקודת מס הכנסה - נבו
+  5. מדריכי דע זכויותיך וחובותיך - רשות המיסים
 
-Usage:
-    pip install -r requirements.txt
+Usage (full rebuild):
     set GEMINI_API_KEY=your_key_here
     python scripts/ingest.py --docs "D:\אוריה\יצירת אפליקציות קלוד\קלוד קוד מס הכנסה"
+
+Usage (append new sources only - faster):
+    python scripts/ingest.py --docs "..." --append
+    python scripts/ingest.py --docs "..." --append --only-new-web
 """
 import argparse
 import base64
@@ -325,6 +330,88 @@ NITUB_KNOWN_PDFS = [
     {"title": "ניתוב שלב א' - ארכיון הוראות ביצוע", "url": "https://claltax.com/הוראות-ביצוע-מס-הכנסה/"},
 ]
 
+# ─────────────────────────────────────────────
+# פקודת מס הכנסה - נבו
+# ─────────────────────────────────────────────
+
+NEVO_URLS = [
+    {"title": "פקודת מס הכנסה - נבו", "url": "https://www.nevo.co.il/law_html/law00/84255.htm"},
+]
+
+def scrape_nevo_page(url: str, title: str) -> Optional[dict]:
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; TaxBot/1.0)"}
+        resp = requests.get(url, headers=headers, timeout=30)
+        if resp.status_code != 200:
+            return None
+        resp.encoding = "utf-8"
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for tag in soup.find_all(["script", "style", "nav", "footer", "header"]):
+            tag.decompose()
+        body = soup.find("body") or soup
+        text = body.get_text(separator="\n", strip=True)
+        if len(text.strip()) < 100:
+            return None
+        return {"title": title, "text": text, "url": url}
+    except Exception as e:
+        print(f"  [error] scrape_nevo_page: {e}")
+        return None
+
+def ingest_nevo() -> list[dict]:
+    print(f"\n[4] Fetching פקודת מס הכנסה from nevo.co.il...")
+    all_chunks = []
+    for item in NEVO_URLS:
+        print(f"  Fetching: {item['title']}")
+        page = scrape_nevo_page(item["url"], item["title"])
+        if page:
+            chunks = chunk_text(page["text"], source=item["title"], url=item["url"])
+            all_chunks.extend(chunks)
+            print(f"    → {len(chunks)} chunks")
+        else:
+            print(f"    → לא נמצא תוכן")
+        time.sleep(0.5)
+    print(f"  Total nevo chunks: {len(all_chunks)}")
+    return all_chunks
+
+# ─────────────────────────────────────────────
+# מדריכי דע זכויותיך וחובותיך
+# ─────────────────────────────────────────────
+
+GUIDES_URLS = [
+    {"title": "דע זכויותיך וחובותיך - מס הכנסה", "url": "https://www.gov.il/he/departments/guides/income_tax_know_your_rights"},
+    {"title": "דע זכויותיך וחובותיך - מיסוי מקרקעין", "url": "https://www.gov.il/he/departments/guides/real_estate_taxation_know_your_rights"},
+    {"title": "מדריך להגשת דוח שנתי", "url": "https://www.gov.il/he/departments/guides/annual_report_guide"},
+    {"title": "מדריך החזר מס לשכירים", "url": "https://www.gov.il/he/departments/guides/tax_refund_guide"},
+]
+
+def ingest_gov_guides() -> list[dict]:
+    print(f"\n[5] Fetching מדריכי דע זכויותיך from gov.il...")
+    all_chunks = []
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; TaxBot/1.0)"}
+    for item in GUIDES_URLS:
+        print(f"  Fetching: {item['title']}")
+        try:
+            resp = requests.get(item["url"], headers=headers, timeout=20)
+            if resp.status_code != 200:
+                print(f"    → HTTP {resp.status_code}, skipping")
+                continue
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for tag in soup.find_all(["script", "style", "nav", "footer"]):
+                tag.decompose()
+            main = soup.find("main") or soup.find("article") or soup.find("body")
+            text = main.get_text(separator="\n", strip=True) if main else ""
+            if len(text.strip()) > 100:
+                chunks = chunk_text(text, source=item["title"], url=item["url"])
+                all_chunks.extend(chunks)
+                print(f"    → {len(chunks)} chunks")
+            else:
+                print(f"    → לא נמצא תוכן")
+        except Exception as e:
+            print(f"    → שגיאה: {e}")
+        time.sleep(0.5)
+    print(f"  Total guides chunks: {len(all_chunks)}")
+    return all_chunks
+
 
 def fetch_circular_text(url: str) -> Optional[str]:
     try:
@@ -375,15 +462,17 @@ def main():
 
     parser = argparse.ArgumentParser(description="Build knowledge base for Tax Q&A")
     parser.add_argument("--docs", type=str, required=True, help="Path to local documents folder")
+    parser.add_argument("--append", action="store_true", help="Append to existing KB (skip already-processed sources)")
     parser.add_argument("--skip-web", action="store_true", help="Skip all web scraping")
     parser.add_argument("--skip-zchut", action="store_true", help="Skip kolzchut.org.il")
-    parser.add_argument("--skip-circulars", action="store_true", help="Skip tax circulars")
+    parser.add_argument("--skip-circulars", action="store_true", help="Skip ניתוב שלב א' circulars")
+    parser.add_argument("--skip-nevo", action="store_true", help="Skip נבו פקודת מס הכנסה")
+    parser.add_argument("--skip-guides", action="store_true", help="Skip gov.il guides")
     args = parser.parse_args()
 
     _api_key = os.environ.get("GEMINI_API_KEY", "")
     if not _api_key:
         print("ERROR: GEMINI_API_KEY environment variable not set!")
-        print("Get a free key at: https://aistudio.google.com/app/apikey")
         exit(1)
 
     print("[INFO] Detecting available embedding model...")
@@ -394,33 +483,81 @@ def main():
         print(f"ERROR: Documents folder not found: {docs_folder}")
         exit(1)
 
-    all_chunks = []
-    all_chunks.extend(ingest_local_documents(docs_folder))
+    # Load existing KB if appending
+    existing_chunks = []
+    existing_sources = set()
+    if args.append and OUTPUT_PATH.exists():
+        print(f"\n[APPEND] Loading existing knowledge base...")
+        with open(OUTPUT_PATH, "r", encoding="utf-8") as f:
+            existing_data = json.load(f)
+        existing_chunks = existing_data.get("chunks", [])
+        existing_sources = {c.get("source", "") for c in existing_chunks}
+        print(f"  Found {len(existing_chunks)} existing chunks from {len(existing_sources)} sources")
 
+    new_chunks = []
+
+    # Local documents
+    local = ingest_local_documents(docs_folder)
+    if args.append:
+        local = [c for c in local if c["source"] not in existing_sources]
+        print(f"  → {len(local)} new local chunks (skipped already-processed)")
+    new_chunks.extend(local)
+
+    # Kolzchut
     if not args.skip_web and not args.skip_zchut:
-        all_chunks.extend(ingest_zchut())
+        if args.append and any("זכותי" in s for s in existing_sources):
+            print("\n[2] Skipping kolzchut.org.il (already in KB)")
+        else:
+            new_chunks.extend(ingest_zchut())
     else:
-        print("\n[2/3] Skipping kolzchut.org.il")
+        print("\n[2] Skipping kolzchut.org.il")
 
+    # Circulars
     if not args.skip_web and not args.skip_circulars:
-        all_chunks.extend(ingest_tax_circulars())
+        if args.append and any("ניתוב שלב א'" in s for s in existing_sources):
+            print("\n[3] Skipping ניתוב שלב א' (already in KB)")
+        else:
+            new_chunks.extend(ingest_tax_circulars())
     else:
-        print("\n[3/3] Skipping tax circulars")
+        print("\n[3] Skipping ניתוב שלב א'")
 
-    print(f"\n[EMBED] Total chunks to embed: {len(all_chunks)}")
-    print("[EMBED] Starting embedding (this may take several minutes)...")
+    # Nevo
+    if not args.skip_web and not args.skip_nevo:
+        if args.append and any("נבו" in s for s in existing_sources):
+            print("\n[4] Skipping נבו (already in KB)")
+        else:
+            new_chunks.extend(ingest_nevo())
+    else:
+        print("\n[4] Skipping נבו")
 
-    embedded_chunks = embed_chunks(all_chunks)
+    # Gov guides
+    if not args.skip_web and not args.skip_guides:
+        if args.append and any("דע זכויותיך" in s for s in existing_sources):
+            print("\n[5] Skipping gov.il guides (already in KB)")
+        else:
+            new_chunks.extend(ingest_gov_guides())
+    else:
+        print("\n[5] Skipping gov.il guides")
+
+    if not new_chunks:
+        print("\n[INFO] No new chunks to process. Done.")
+        return
+
+    print(f"\n[EMBED] New chunks to embed: {len(new_chunks)}")
+    print("[EMBED] Starting embedding...")
+    embedded_new = embed_chunks(new_chunks)
+
+    all_chunks = existing_chunks + embedded_new
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-        json.dump({"chunks": embedded_chunks}, f, ensure_ascii=False)
+        json.dump({"chunks": all_chunks}, f, ensure_ascii=False)
 
     print(f"\n[DONE] Knowledge base saved: {OUTPUT_PATH}")
-    print(f"       {len(embedded_chunks)} chunks embedded successfully")
+    print(f"       {len(all_chunks)} total chunks ({len(embedded_new)} new)")
     print(f"\nNext steps:")
     print(f"  git add data/knowledge_base.json")
-    print(f"  git commit -m 'Add knowledge base'")
+    print(f"  git commit -m 'Update knowledge base'")
     print(f"  git push origin claude/tax-knowledge-portal-fcaXi")
 
 

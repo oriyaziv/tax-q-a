@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>פריסת שבח v1.14</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root{--bg:#f4f2ee;--surface:#fff;--border:#ddd9d2;--border2:#c8c3ba;--accent:#2c5f8a;--alight:#e8f0f8;--green:#5a8c3e;--glight:#edf5e8;--red:#c0392b;--rlight:#fdecea;--orange:#e67e22;--olight:#fef5ec;--text:#1a1a1a;--t2:#666;--t3:#999;--r:6px;--sh:0 1px 4px rgba(0,0,0,.08);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);padding:20px 16px 60px;font-size:14px;}
+.hdr{max-width:920px;margin:0 auto 24px;display:flex;align-items:baseline;gap:10px;border-bottom:2px solid var(--accent);padding-bottom:10px;}
+.hdr h1{font-size:22px;font-weight:900;color:var(--accent);}
+.hdr .ver{font-size:11px;color:var(--t3);font-family:'IBM Plex Mono',monospace;}
+.wrap{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+.fld{display:flex;flex-direction:column;gap:4px;}
+.fld label{font-size:11px;color:var(--t2);font-weight:600;}
+.fld input,.fld select{background:var(--surface);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:'Heebo',sans-serif;font-size:14px;padding:6px 10px;outline:none;transition:border-color .12s;}
+.fld input:focus,.fld select:focus{border-color:var(--accent);}
+.fld input[type=number]{-moz-appearance:textfield;}
+.fld input[type=number]::-webkit-outer-spin-button,.fld input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.fld.req label::after{content:' *';color:var(--red);}
+.fld input.missing{border-color:var(--red);background:var(--rlight);}
+.fld.w60 input{width:60px;}.fld.w90 select,.fld.w90 input{width:90px;}.fld.w100 input{width:100px;}.fld.w110 input{width:110px;}.fld.w130 input{width:130px;}.fld.w150 input{width:150px;}
+.fld.mn input{font-family:'IBM Plex Mono',monospace;direction:ltr;text-align:right;}
+.fr{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:10px;}
+.fr:last-child{margin-bottom:0;}
+.tgl-w{display:flex;flex-direction:column;gap:4px;}
+.tgl-w .lb{font-size:11px;color:var(--t2);font-weight:600;}
+.tgl{display:flex;border:1px solid var(--border2);border-radius:4px;overflow:hidden;}
+.tgl input[type=radio]{display:none;}
+.tgl label{padding:6px 11px;font-size:13px;cursor:pointer;background:var(--surface);color:var(--t2);transition:background .1s;white-space:nowrap;border-left:1px solid var(--border2);}
+.tgl label:last-of-type{border-left:none;}
+.tgl input[type=radio]:checked+label{background:var(--accent);color:#fff;font-weight:700;}
+.tgl input[type=radio]:disabled+label{opacity:.4;cursor:default;}
+.dc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;}
+.dh{background:var(--accent);padding:8px 14px;display:flex;align-items:center;gap:8px;}
+.dh-t{font-size:13px;font-weight:700;color:#fff;flex:1;}
+.hbtn{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:3px;padding:2px 9px;cursor:pointer;font-size:11px;font-family:'Heebo',sans-serif;font-weight:600;white-space:nowrap;}
+.hbtn:hover{background:rgba(255,255,255,.35);}
+.hbtn.split{border:1px solid rgba(255,255,255,.6);}
+.xbtn{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:3px;width:22px;height:22px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.xbtn:hover{background:rgba(255,255,255,.35);}
+.db{padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+.pb{display:none;border-top:1px dashed var(--border2);margin-top:4px;padding-top:12px;}
+.pb.open{display:block;}
+.pyb{background:var(--alight);border:1px solid #c0d6ec;border-radius:4px;padding:10px 12px;margin-bottom:8px;}
+.pyb:last-child{margin-bottom:0;}
+.pyt{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:8px;}
+.bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.bt{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);}
+.addbtn{background:var(--surface);border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:7px 14px;font-family:'Heebo',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
+.addbtn:hover{background:var(--alight);}
+.calcbtn{background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:13px;font-family:'Heebo',sans-serif;font-size:16px;font-weight:800;cursor:pointer;}
+.calcbtn:hover{opacity:.88;}
+.err{background:var(--rlight);border:1px solid #f5b8b2;border-radius:4px;padding:8px 12px;font-size:13px;color:var(--red);display:none;margin-top:6px;}
+.warn{background:var(--olight);border:1px solid #f0a060;border-radius:4px;padding:7px 12px;font-size:12px;color:var(--orange);}
+.res{display:none;}.res.show{display:block;}
+.rh{font-size:13px;font-weight:700;color:var(--green);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--green);}
+.rdc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:12px;overflow:hidden;}
+.rdh{background:var(--accent);padding:7px 14px;font-size:13px;font-weight:700;color:#fff;}
+.os{padding:10px 14px;border-bottom:1px solid var(--border);}
+.os:last-child{border-bottom:none;}
+.ost{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:8px;}
+.otbl{width:100%;border-collapse:collapse;}
+.otbl thead tr{border-bottom:2px solid var(--border2);}
+.otbl thead th{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);padding:2px 8px 6px;text-align:right;}
+.otbl thead th.th-sum{text-align:left;direction:ltr;}
+.otbl thead th.th-date{text-align:left;direction:ltr;}
+.otbl tbody tr{border-bottom:1px solid #f0ede8;}
+.otbl tbody tr:last-child{border-bottom:none;}
+.otbl tbody td{padding:4px 8px;font-size:13px;vertical-align:baseline;}
+.td-kod{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12px;text-align:right;width:44px;}
+.badge{display:inline-block;background:var(--alight);border-radius:3px;padding:1px 6px;color:var(--accent);}
+.badge.g{background:var(--glight);color:var(--green);}
+.td-name{font-size:12px;color:var(--t2);}
+.td-sum{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--text);direction:ltr;text-align:left;}
+.td-sum.g{color:var(--green);}
+.td-date{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--t3);direction:ltr;text-align:left;}
+.sep-row td{padding:2px 0!important;border-bottom:1px dashed var(--border2)!important;}
+.meta-row{font-size:12px;color:var(--t2);padding:0 0 8px;border-bottom:1px dashed var(--border2);margin-bottom:8px;display:flex;gap:20px;flex-wrap:wrap;}
+.meta-row .mv{font-weight:700;color:var(--text);}
+.note{font-size:11px;color:var(--t2);background:var(--glight);border-radius:3px;padding:4px 8px;margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="hdr"><h1>פריסת שבח</h1><span class="ver">v1.14</span></div>
+<div class="wrap">
+  <div>
+    <div class="bar"><span class="bt">עסקאות</span><button class="addbtn" onclick="addDeal()">+ הוסף עסקה</button></div>
+    <div id="deals-con" style="display:flex;flex-direction:column;gap:10px;"></div>
+    <div class="err" id="err"></div>
+  </div>
+  <button class="calcbtn" onclick="calculate()">הפק נתוני IHON / ISUM</button>
+  <div class="res" id="res">
+    <div class="rh">תוצאות — נתונים למילוי</div>
+    <div id="res-con"></div>
+  </div>
+</div>
+<script>
+const BR_P={
+  2016:[[62640,.10],[107040,.14],[166320,.21],[237600,.31],[469920,.34],[803520,.47],[Infinity,.50]],
+  2017:[[74640,.10],[107040,.14],[171840,.20],[238800,.31],[496920,.35],[640000,.47],[Infinity,.50]],
+  2018:[[74880,.10],[107400,.14],[172620,.20],[239520,.31],[498360,.35],[641880,.47],[Infinity,.50]],
+  2019:[[75720,.10],[108600,.14],[174360,.20],[242400,.31],[504360,.35],[649500,.47],[Infinity,.50]],
+  2020:[[75960,.10],[108960,.14],[174960,.20],[243120,.31],[505920,.35],[651600,.47],[Infinity,.50]],
+  2021:[[75480,.10],[108360,.14],[173880,.20],[241680,.31],[502920,.35],[647640,.47],[Infinity,.50]],
+  2022:[[77400,.10],[110880,.14],[178080,.20],[247440,.31],[514920,.35],[663240,.47],[Infinity,.50]],
+  2023:[[81480,.10],[116760,.14],[187440,.20],[260520,.31],[542160,.35],[698280,.47],[Infinity,.50]],
+  2024:[[84120,.10],[120720,.14],[193800,.20],[269280,.31],[560280,.35],[721560,.47],[Infinity,.50]],
+  2025:[[84120,.10],[120720,.14],[193800,.20],[269280,.31],[560280,.35],[721560,.47],[Infinity,.50]],
+};
+function taxP(inc,yr){const t=BR_P[yr];if(!t||inc<=0)return 0;let tx=0,p=0;for(const[u,r]of t){if(inc<=p)break;tx+=(Math.min(inc,u)-p)*r;p=u;}return Math.round(tx);}
+function calcCredit60(base,mrY,r20Y,r25Y,shbY,masgil,yr){
+  if(masgil===25){return Math.max(0,Math.round(shbY*0.25)-(taxP(base+shbY,yr)-taxP(base,yr)));}
+  // מחשב זיכוי לפי סדר נתון — כל רכיב ממשיך מאחרי הקודם
+  function creditForOrder(order){
+    let cursor=base, total=0;
+    for(const [amt,rate] of order){
+      if(amt<=0) continue;
+      const passive=Math.round(amt*rate);
+      const personal=taxP(cursor+amt,yr)-taxP(cursor,yr);
+      total+=Math.max(0,passive-personal);
+      cursor+=amt;
+    }
+    return total;
+  }
+  const parts=[[mrY,0.31],[r20Y,0.20],[r25Y,0.25]];
+  // כל 6 תמורות — מחזיר את הזיכוי המקסימלי
+  const perms=[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+  let best=0;
+  for(const p of perms) best=Math.max(best,creditForOrder([parts[p[0]],parts[p[1]],parts[p[2]]]));
+  return best;
+}
+function yearFromDate(s){const d=s.replace(/\D/g,'');return d.length>=8?parseInt(d.slice(4,8)):null;}
+function dateCode(s){const d=s.replace(/\D/g,'');return d.length>=8?d.slice(0,2)+d.slice(2,4)+d.slice(4,8):d;}
+function f(n){return Math.round(Number(n)||0).toLocaleString('he-IL');}
+function el(id){return document.getElementById(id);}
+function fv(id){return parseFloat(el(id)?.value)||0;}
+
+let seq=0, dealIds=[];
+
+function addDeal(preset={}){
+  if(dealIds.length>=6){showErr('ניתן עד 6 עסקאות');return;}
+  clearErr();seq++;dealIds.push(seq);
+  const div=document.createElement('div');
+  div.className='dc';div.id=`d-${seq}`;
+  div.innerHTML=dealHTML(seq,preset);
+  el('deals-con').appendChild(div);
+  attachEnter(div);
+  // החל preset
+  if(preset.mg==='25') togMasgil(seq);
+  if(preset.tp) document.querySelector(`input[name="tp-${seq}"][value="${preset.tp}"]`).checked=true;
+  if(preset.ow) document.querySelector(`input[name="ow-${seq}"][value="${preset.ow}"]`).checked=true;
+}
+function attachEnter(el){el.querySelectorAll('input,select').forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter')calculate();}));}
+
+function dealHTML(id, pre={}){
+  return `<div class="dh">
+    <span class="dh-t">עסקה ${id}${pre.owLbl?' — '+pre.owLbl:''}</span>
+    ${pre.owLbl ? '' : '<button class="hbtn split" onclick="splitCouple('+id+')">⇌ פצל לזוג</button>'}
+    <button class="hbtn" onclick="clearDeal(${id})">נקה</button>
+    <button class="xbtn" onclick="rm(${id})">×</button>
+  </div>
+  <div class="db">
+    <div class="fr">
+      <div class="tgl-w"><span class="lb">שייכות</span><div class="tgl">
+        <input type="radio" name="ow-${id}" id="ow1-${id}" value="1" checked><label for="ow1-${id}">בן זוג רשום</label>
+        <input type="radio" name="ow-${id}" id="ow2-${id}" value="2"><label for="ow2-${id}">בן זוג</label>
+      </div></div>
+      <div class="tgl-w"><span class="lb">סוג נכס</span><div class="tgl">
+        <input type="radio" name="tp-${id}" id="apt-${id}" value="apt" checked><label for="apt-${id}">דירת מגורים</label>
+        <input type="radio" name="tp-${id}" id="lnd-${id}" value="land"><label for="lnd-${id}">קרקע/אחר</label>
+      </div></div>
+      <div class="tgl-w"><span class="lb">מס מוגבל</span><div class="tgl">
+        <input type="radio" name="mg-${id}" id="mg50-${id}" value="50" checked onchange="togMasgil(${id})"><label for="mg50-${id}">50</label>
+        <input type="radio" name="mg-${id}" id="mg25-${id}" value="25" onchange="togMasgil(${id})"><label for="mg25-${id}">25</label>
+      </div></div>
+      <div class="tgl-w"><span class="lb">פריסה</span><div class="tgl">
+        <input type="radio" name="pr-${id}" id="prn-${id}" value="no" checked onchange="togPr(${id})"><label for="prn-${id}">ללא</label>
+        <input type="radio" name="pr-${id}" id="pry-${id}" value="yes" onchange="togPr(${id})"><label for="pry-${id}">עם פריסה</label>
+      </div></div>
+    </div>
+    <div class="fr">
+      <div class="fld w130 req"><label>תאריך עסקה</label><input type="text" id="dt-${id}" value="${pre.dt||''}" placeholder="DD/MM/YYYY" maxlength="10" oninput="fmtD(this,${id})"></div>
+      <div class="fld w130 mn req"><label>שווי מכירה</label><input type="number" id="sl-${id}" value="${pre.sl||''}" placeholder="0" oninput="warnCheck(${id})"></div>
+      <div class="fld w130 mn" id="mrwrap-${id}"><label>ראלי עד תחילה <span style="font-weight:400;color:var(--t3)">(מס שולי)</span></label><input type="number" id="mr-${id}" value="${pre.mr||''}" placeholder="0" oninput="warnCheck(${id})"></div>
+      <div class="fld w110 mn" id="r20wrap-${id}"><label>ראלי עד שינוי <span style="font-weight:400;color:var(--t3)">(20%)</span></label><input type="number" id="r2-${id}" value="${pre.r2||''}" placeholder="0" oninput="warnCheck(${id})"></div>
+      <div class="fld w130 mn" id="r25wrap-${id}"><label>ראלי לאחר שינוי <span style="font-weight:400;color:var(--t3)">(25%)</span></label><input type="number" id="r25-${id}" value="${pre.r25||''}" placeholder="0" oninput="warnCheck(${id})"></div>
+      <div class="fld w150 mn" id="shbwrap-${id}" style="display:none"><label>שבח מקרקעין</label><input type="number" id="shb-${id}" value="${pre.shb||''}" placeholder="0" oninput="warnCheck(${id})"></div>
+      <div class="fld w130 mn" id="infwrap-${id}"><label>אינפלציוני חייב <span style="font-weight:400;color:var(--t3)">(10%)</span></label><input type="number" id="inf-${id}" value="${pre.inf||''}" placeholder="0"></div>
+      <div class="fld w110 mn"><label>מס נטו</label><input type="number" id="masnet-${id}" value="${pre.masnet||''}" placeholder="0"></div>
+    </div>
+    <div id="warn-${id}"></div>
+    <div class="pb" id="pb-${id}">
+      <div class="fr">
+        <div class="fld w60"><label>שנות פריסה</label>
+          <select id="pn-${id}" onchange="buildY(${id})"><option>2</option><option>3</option><option>4</option></select>
+        </div>
+        <div class="fld w90"><label>שנת מכירה</label>
+          <input type="text" id="psy-disp-${id}" placeholder="מהתאריך" readonly style="width:90px;background:#f8f8f8;color:var(--t2);">
+        </div>
+        <div class="fld w100 req"><label>שנת לידה</label>
+          <input type="number" id="by-${id}" placeholder="" min="1930" max="2010" oninput="buildY(${id})">
+        </div>
+      </div>
+      <div id="py-${id}"></div>
+    </div>
+  </div>`;
+}
+
+function splitCouple(id){
+  // קרא את כל הערכים הנוכחיים
+  const dt=el(`dt-${id}`)?.value||'';
+  const mg=document.querySelector(`input[name="mg-${id}"]:checked`)?.value||'50';
+  const tp=document.querySelector(`input[name="tp-${id}"]:checked`)?.value||'apt';
+  const is25=mg==='25';
+  const half=v=>v?String(Math.round(parseFloat(v)/2)):'';
+  const sl=half(el(`sl-${id}`)?.value);
+  const mr=is25?'':half(el(`mr-${id}`)?.value);
+  const r2=is25?'':half(el(`r2-${id}`)?.value);
+  const r25=is25?'':half(el(`r25-${id}`)?.value);
+  const shb=is25?half(el(`shb-${id}`)?.value):'';
+  const inf=is25?'':half(el(`inf-${id}`)?.value);
+  const masnet=half(el(`masnet-${id}`)?.value);
+
+  // מחק את העסקה הנוכחית
+  rm(id);
+
+  // הוסף שתי עסקאות חדשות: בן זוג רשום + בן זוג
+  const preset={dt,mg,tp,sl,mr,r2,r25,shb,inf,masnet};
+  addDeal({...preset, ow:'1', owLbl:'בן זוג רשום'});
+  addDeal({...preset, ow:'2', owLbl:'בן זוג'});
+}
+
+function togMasgil(id){
+  const is25=document.querySelector(`input[name="mg-${id}"]:checked`)?.value==='25';
+  el(`mrwrap-${id}`)&&(el(`mrwrap-${id}`).style.display=is25?'none':'');
+  el(`r20wrap-${id}`)&&(el(`r20wrap-${id}`).style.display=is25?'none':'');
+  el(`r25wrap-${id}`)&&(el(`r25wrap-${id}`).style.display=is25?'none':'');
+  el(`shbwrap-${id}`)&&(el(`shbwrap-${id}`).style.display=is25?'':'none');
+  el(`infwrap-${id}`)&&(el(`infwrap-${id}`).style.display=is25?'none':'');
+  const pry=el(`pry-${id}`);
+  if(pry){pry.disabled=is25;if(is25){el(`prn-${id}`).checked=true;el(`pb-${id}`).classList.remove('open');}}
+}
+function rm(id){el(`d-${id}`)?.remove();dealIds=dealIds.filter(x=>x!==id);clearErr();}
+function clearDeal(id){
+  el(`d-${id}`)?.querySelectorAll('input[type=number],input[type=text]:not([readonly])').forEach(i=>i.value='');
+  if(el(`warn-${id}`))el(`warn-${id}`).innerHTML='';
+  if(el(`py-${id}`))el(`py-${id}`).innerHTML='';
+}
+function togPr(id){
+  const open=document.querySelector(`input[name="pr-${id}"]:checked`)?.value==='yes';
+  el(`pb-${id}`).classList.toggle('open',open);
+  if(open)buildY(id);
+}
+function fmtD(inp,id){
+  let v=inp.value.replace(/\D/g,'');
+  if(v.length>=5)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4,8);
+  else if(v.length>=3)v=v.slice(0,2)+'/'+v.slice(2);
+  inp.value=v;
+  const yr=yearFromDate(v);
+  const disp=el(`psy-disp-${id}`);if(disp)disp.value=yr||'';
+  buildY(id);
+}
+function getSY(id){return yearFromDate(el(`dt-${id}`)?.value||'');}
+function warnCheck(id){
+  const sale=fv(`sl-${id}`);
+  const is25=document.querySelector(`input[name="mg-${id}"]:checked`)?.value==='25';
+  const gain=is25?fv(`shb-${id}`):(fv(`mr-${id}`)+fv(`r2-${id}`)+fv(`r25-${id}`));
+  const wb=el(`warn-${id}`);if(!wb)return;
+  wb.innerHTML=sale>0&&gain>sale?`<div class="warn">⚠ סכום הרווחים (${f(gain)}) גבוה משווי המכירה (${f(sale)})</div>`:'';
+}
+function buildY(id){
+  const num=parseInt(el(`pn-${id}`)?.value)||2;
+  const sy=getSY(id);const by=parseInt(el(`by-${id}`)?.value)||null;
+  if(!sy){el(`py-${id}`).innerHTML='';return;}
+  let html='';
+  for(let i=1;i<num;i++){
+    const y=sy-i;if(y<2016||!BR_P[y])continue;
+    const over60=by?(y-by>=60):false;
+    html+=`<div class="pyb"><div class="pyt">שנת ${y}${over60?' — מעל גיל 60':''}</div>
+      <div class="fr">
+        <div class="fld w130 mn"><label>הכנסה חייבת</label><input type="number" id="inc-${id}-${y}" placeholder="0"></div>
+        <div class="fld w150 mn"><label>נקודות זיכוי לפריסה</label><input type="number" id="pts-${id}-${y}" placeholder="0"></div>
+      </div></div>`;
+  }
+  el(`py-${id}`).innerHTML=html;attachEnter(el(`py-${id}`));
+}
+
+function tR(k,n,s,d='',g=false){return `<tr><td class="td-kod"><span class="badge${g?' g':''}">${k}</span></td><td class="td-name">${n}</td><td class="td-sum${g?' g':''}">${s}</td><td class="td-date">${d}</td></tr>`;}
+function tRND(k,n,s,g=false){return `<tr><td class="td-kod"><span class="badge${g?' g':''}">${k}</span></td><td class="td-name">${n}</td><td class="td-sum${g?' g':''}" colspan="2">${s}</td></tr>`;}
+function sepR(){return `<tr class="sep-row"><td colspan="4"></td></tr>`;}
+function mkTbl(rows,hd=true){const d=hd?`<th class="th-date">תאריך</th>`:'';return `<table class="otbl"><thead><tr><th>קוד</th><th>שם</th><th class="th-sum">סכום</th>${d}</tr></thead><tbody>${rows}</tbody></table>`;}
+
+function calculate(){
+  clearErr();
+  const active=dealIds.filter(id=>el(`d-${id}`));
+  if(!active.length){showErr('יש להוסיף עסקה אחת לפחות');return;}
+  for(const id of active){
+    if(!el(`dt-${id}`)?.value||!getSY(id)){el(`dt-${id}`).classList.add('missing');showErr(`עסקה ${id}: תאריך עסקה חובה`);return;}
+    if(!fv(`sl-${id}`)){el(`sl-${id}`).classList.add('missing');showErr(`עסקה ${id}: שווי מכירה חובה`);return;}
+    const hasPr=document.querySelector(`input[name="pr-${id}"]:checked`)?.value==='yes';
+    if(hasPr){
+      if(!el(`by-${id}`)?.value){el(`by-${id}`).classList.add('missing');showErr(`עסקה ${id}: שנת לידה חובה בפריסה`);return;}
+    }
+  }
+
+  const rc=el('res-con');rc.innerHTML='';
+  let totN=0,nR=0,nZ=0,totalMasnet=0;
+  const cards=[];
+
+  for(const id of active){
+    const owner=document.querySelector(`input[name="ow-${id}"]:checked`)?.value||'1';
+    const owLbl=owner==='1'?'בן זוג רשום':'בן זוג';
+    const owCode=owner==='1'?2:3;
+    const nktype=document.querySelector(`input[name="tp-${id}"]:checked`)?.value||'apt';
+    const masgil=parseInt(document.querySelector(`input[name="mg-${id}"]:checked`)?.value)||50;
+    const is25=masgil===25;
+    const hasPr=document.querySelector(`input[name="pr-${id}"]:checked`)?.value==='yes';
+    const dtc=dateCode(el(`dt-${id}`)?.value||'');
+    const k70=nktype==='apt'?1:2;
+    const masnet=fv(`masnet-${id}`);totalMasnet+=masnet;
+    const sale=fv(`sl-${id}`);
+    const mr=is25?0:fv(`mr-${id}`);
+    const r20=is25?0:fv(`r2-${id}`);
+    const r25=is25?0:fv(`r25-${id}`);
+    const shb=is25?fv(`shb-${id}`):0;
+    const inf=is25?0:fv(`inf-${id}`);
+    totN++;if(owner==='1')nR++;else nZ++;
+
+    let mainRows=tR('15','מכירה',f(sale),dtc);
+    if(is25) mainRows+=tR('16','שבח מקרקעין',f(shb))+tR('17','אינפלציוני חייב',f(inf))+tR('18','מס מרבי',masgil)+tR('70','דירת מגורים',k70);
+    else mainRows+=tR('16','רווח ראלי',f(mr))+tR('17','אינפלציוני חייב',f(inf))+tR('18','מס מרבי',masgil)+tR('19','ראלי קובע',f(r20))+tR('69','ראלי לאחר שינוי',f(r25))+tR('70','דירת מגורים',k70);
+
+    let prisaRows='',notes='';
+    if(hasPr){
+      const num=parseInt(el(`pn-${id}`)?.value)||2;
+      const sy=getSY(id);
+      const by=parseInt(el(`by-${id}`)?.value);
+      const mrY=mr/num,r20Y=r20/num,r25Y=r25/num,shbY=shb/num;
+      for(let i=1;i<num;i++){
+        const y=sy-i;if(y<2016||!BR_P[y])continue;
+        const over60=(y-by)>=60;
+        const baseInc=fv(`inc-${id}-${y}`);
+        const pts=fv(`pts-${id}-${y}`);
+        const c60=over60?calcCredit60(baseInc,mrY,r20Y,r25Y,shbY,masgil,y):0;
+        const f98=pts+c60;
+        prisaRows+=sepR()+tR('97','הכנסה חייבת',f(baseInc),String(y),true)+tR('98','זיכוי פריסה',f(f98),String(y),true);
+        if(over60&&c60>0)notes+=`<div class="note">שנת ${y} — נקודות זיכוי ${f(pts)} + זיכוי גיל 60 ${f(c60)}</div>`;
+      }
+    }
+
+    const meta=`<div class="meta-row"><div>סוג עסקה: <span class="mv">50</span></div><div>פריסה: <span class="mv">${hasPr?1:0}</span></div><div>שייכות: <span class="mv">${owCode}</span></div></div>`;
+    cards.push({owLbl,hasPr,pnum:hasPr?el(`pn-${id}`)?.value:'',mainRows,prisaRows,meta,notes});
+  }
+
+  let nNum=1;
+  for(const c of cards){
+    const div=document.createElement('div');div.className='rdc';
+    div.innerHTML=`<div class="rdh">נספח ${nNum++} · ${c.owLbl}${c.hasPr?` · פריסה ${c.pnum} שנים`:''}</div><div class="os"><div class="ost">IHON</div>${c.meta}${mkTbl(c.mainRows+c.prisaRows,true)}${c.notes}</div>`;
+    rc.appendChild(div);
+  }
+
+  const totalSale=active.reduce((s,id)=>s+fv(`sl-${id}`),0);
+  const isum=tRND('054','סה"כ נספחים',totN,true)+(nR?tRND('254','נספחים בן זוג רשום',nR,true):'')+(nZ?tRND('354','נספחים בן זוג',nZ,true):'')+tRND('056','מחזור מכירות',f(totalSale),true)+(totalMasnet?tRND('041','מס נטו',f(totalMasnet),true):'');
+  const isumDiv=document.createElement('div');isumDiv.className='rdc';
+  isumDiv.innerHTML=`<div class="rdh">ISUM — כל העסקאות</div><div class="os"><div class="ost">ISUM</div>${mkTbl(isum,false)}</div>`;
+  rc.appendChild(isumDiv);
+
+  el('res').classList.add('show');
+  el('res').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function showErr(m){const e=el('err');e.textContent=m;e.style.display='block';}
+function clearErr(){el('err').style.display='none';document.querySelectorAll('.missing').forEach(i=>i.classList.remove('missing'));}
+document.addEventListener('keydown',e=>{if(e.key==='Enter')calculate();});
+addDeal();
+</script>
+</body>
+</html>

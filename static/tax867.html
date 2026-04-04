@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת טפסי 867</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 30px; text-align: center; }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .version { background: #ff9800; color: white; padding: 8px 20px; border-radius: 20px; font-size: 16px; font-weight: bold; display: inline-block; margin-top: 10px; }
+        .content { padding: 30px; }
+        .form-section { background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; border-right: 4px solid #667eea; }
+        .form-section h2 { color: #2a5298; margin-bottom: 20px; font-size: 20px; display: flex; align-items: center; }
+        .form-section h2::before { content: "📄"; margin-left: 10px; }
+        .sub-form { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 2px solid #e0e0e0; }
+        .sub-form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
+        .sub-form-title { font-weight: bold; color: #667eea; font-size: 16px; }
+        .remove-btn { background: #f44336; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; }
+        .remove-btn:hover { background: #d32f2f; }
+        .input-group { margin-bottom: 15px; }
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #333; font-size: 14px; }
+        input[type="number"] { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; -moz-appearance: textfield; }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"]:focus { outline: none; border-color: #667eea; }
+        .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 20px; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4); }
+        .btn-add { background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); padding: 10px 20px; font-size: 16px; margin-top: 10px; }
+        .results { background: #e8f5e9; border-radius: 10px; padding: 25px; margin-top: 30px; display: none; border-right: 4px solid #4caf50; }
+        .results.show { display: block; }
+        .results h3 { color: #2e7d32; margin-bottom: 20px; font-size: 22px; }
+        .result-item { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .result-item strong { color: #1976d2; display: block; margin-bottom: 5px; font-size: 16px; }
+        .system-badge { display: inline-block; background: #ff9800; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 8px; }
+        .info-box { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 14px; }
+        .foreign-section { background: #e3f2fd; border: 2px solid #2196f3; border-radius: 8px; padding: 15px; margin-top: 15px; }
+        .foreign-section h4 { color: #1565c0; margin-bottom: 10px; font-size: 16px; }
+        .loss-box { background: #ffe8e8; border: 2px solid #ff6b6b; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .loss-box label { color: #c92a2a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧮 מערכת חישוב טפסי 867</h1>
+            <div class="version">גרסה 3.2</div>
+        </div>
+        <div class="content">
+            <div class="info-box">
+                <strong>💡 הוראות:</strong> העתק את הנתונים מטפסי 867 א+ב, 867 ג, ו-867. המערכת תחשב אוטומטית את הקיזוזים האופטימליים.
+            </div>
+            <div class="form-section">
+                <h2>טופס 867 א+ב</h2>
+                <div id="forms867ab">
+                    <div class="sub-form" id="form867ab_1">
+                        <div class="sub-form-header"><span class="sub-form-title">טופס 867 א+ב מספר 1</span></div>
+                        <div class="input-group"><label>רווח 15%</label><input type="number" class="profit15" placeholder="0"></div>
+                        <div class="input-group"><label>רווח 20%</label><input type="number" class="profit20" placeholder="0"></div>
+                        <div class="input-group"><label>רווח 25%</label><input type="number" class="profit25" placeholder="0"></div>
+                        <div class="loss-box">
+                            <label>הפסדים ברי קיזוז</label>
+                            <input type="number" class="lossOffsetable" placeholder="0">
+                        </div>
+                        <div class="input-group"><label>מחזור מכירות</label><input type="number" class="salesVolume" placeholder="0"></div>
+                        <div class="input-group"><label>ניכוי במקור</label><input type="number" class="taxWithheld867ab" placeholder="0"></div>
+                    </div>
+                </div>
+                <button class="btn btn-add" onclick="addForm867ab()">➕ הוסף טופס 867 א+ב</button>
+            </div>
+            <div class="form-section">
+                <h2>הפסדים מועברים</h2>
+                <div class="input-group">
+                    <label>הפסד מועבר משנה קודמת</label>
+                    <input type="number" id="lossPrevYear" placeholder="0">
+                </div>
+            </div>
+            <div class="form-section">
+                <h2>טופס 867 ג</h2>
+                <div id="forms867c">
+                    <div class="sub-form" id="form867c_1">
+                        <div class="sub-form-header"><span class="sub-form-title">טופס 867 ג מספר 1</span></div>
+                        <div class="input-group"><label>דיבידנד 15%</label><input type="number" class="dividend15" placeholder="0"></div>
+                        <div class="input-group"><label>דיבידנד 20%</label><input type="number" class="dividend20" placeholder="0"></div>
+                        <div class="input-group"><label>דיבידנד 25%</label><input type="number" class="dividend25" placeholder="0"></div>
+                        <div class="input-group"><label>ריבית נ.ע. 15%</label><input type="number" class="interest867c15" placeholder="0"></div>
+                        <div class="input-group"><label>ריבית נ.ע. 20%</label><input type="number" class="interest867c20" placeholder="0"></div>
+                        <div class="input-group"><label>ריבית נ.ע. 25%</label><input type="number" class="interest867c25" placeholder="0"></div>
+                        <div class="input-group"><label>ניכוי במקור</label><input type="number" class="taxWithheld867c" placeholder="0"></div>
+                        <div class="foreign-section">
+                            <h4>🌍 הכנסות חו"ל</h4>
+                            <div class="input-row">
+                                <div><label>דיבידנד חו"ל 25%</label><input type="number" class="foreignDiv25" placeholder="0"></div>
+                                <div><label>מס ששולם (25%)</label><input type="number" class="foreignDiv25Tax" placeholder="0"></div>
+                            </div>
+                            <div class="input-row">
+                                <div><label>ריבית חו"ל 15%</label><input type="number" class="foreignInt15" placeholder="0"></div>
+                                <div><label>מס ששולם (15%)</label><input type="number" class="foreignInt15Tax" placeholder="0"></div>
+                            </div>
+                            <div class="input-row">
+                                <div><label>ריבית חו"ל 20%</label><input type="number" class="foreignInt20" placeholder="0"></div>
+                                <div><label>מס ששולם (20%)</label><input type="number" class="foreignInt20Tax" placeholder="0"></div>
+                            </div>
+                            <div class="input-row">
+                                <div><label>ריבית חו"ל 25%</label><input type="number" class="foreignInt25" placeholder="0"></div>
+                                <div><label>מס ששולם (25%)</label><input type="number" class="foreignInt25Tax" placeholder="0"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-add" onclick="addForm867c()">➕ הוסף טופס 867 ג</button>
+            </div>
+            <div class="form-section">
+                <h2>טופס 867 - ריבית מפקדונות</h2>
+                <div class="input-group"><label>ריבית 15%</label><input type="number" id="deposit15" placeholder="0"></div>
+                <div class="input-group"><label>ריבית 20%</label><input type="number" id="deposit20" placeholder="0"></div>
+                <div class="input-group"><label>ריבית 25%</label><input type="number" id="deposit25" placeholder="0"></div>
+                <div class="input-group"><label>ניכוי במקור</label><input type="number" id="taxWithheld" placeholder="0"></div>
+            </div>
+            <button class="btn" onclick="calculate()">🧮 חשב והצג תוצאות</button>
+            <div class="results" id="results">
+                <h3>📊 תוצאות</h3>
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+var counter867ab=1,counter867c=1;
+function addForm867ab(){counter867ab++;var c=document.getElementById('forms867ab'),d=document.createElement('div');d.className='sub-form';d.id='form867ab_'+counter867ab;d.innerHTML='<div class="sub-form-header"><span class="sub-form-title">טופס 867 א+ב מספר '+counter867ab+'</span><button type="button" class="remove-btn" onclick="removeForm(\'form867ab_'+counter867ab+'\')">🗑️ הסר</button></div><div class="input-group"><label>רווח 15%</label><input type="number" class="profit15" placeholder="0"></div><div class="input-group"><label>רווח 20%</label><input type="number" class="profit20" placeholder="0"></div><div class="input-group"><label>רווח 25%</label><input type="number" class="profit25" placeholder="0"></div><div class="loss-box"><label>הפסדים ברי קיזוז</label><input type="number" class="lossOffsetable" placeholder="0"></div><div class="input-group"><label>מחזור מכירות</label><input type="number" class="salesVolume" placeholder="0"></div><div class="input-group"><label>ניכוי במקור</label><input type="number" class="taxWithheld867ab" placeholder="0"></div>';c.appendChild(d)}
+function addForm867c(){counter867c++;var c=document.getElementById('forms867c'),d=document.createElement('div');d.className='sub-form';d.id='form867c_'+counter867c;d.innerHTML='<div class="sub-form-header"><span class="sub-form-title">טופס 867 ג מספר '+counter867c+'</span><button type="button" class="remove-btn" onclick="removeForm(\'form867c_'+counter867c+'\')">🗑️ הסר</button></div><div class="input-group"><label>דיבידנד 15%</label><input type="number" class="dividend15" placeholder="0"></div><div class="input-group"><label>דיבידנד 20%</label><input type="number" class="dividend20" placeholder="0"></div><div class="input-group"><label>דיבידנד 25%</label><input type="number" class="dividend25" placeholder="0"></div><div class="input-group"><label>ריבית נ.ע. 15%</label><input type="number" class="interest867c15" placeholder="0"></div><div class="input-group"><label>ריבית נ.ע. 20%</label><input type="number" class="interest867c20" placeholder="0"></div><div class="input-group"><label>ריבית נ.ע. 25%</label><input type="number" class="interest867c25" placeholder="0"></div><div class="input-group"><label>ניכוי במקור</label><input type="number" class="taxWithheld867c" placeholder="0"></div><div class="foreign-section"><h4>🌍 הכנסות חו"ל</h4><div class="input-row"><div><label>דיבידנד חו"ל 25%</label><input type="number" class="foreignDiv25" placeholder="0"></div><div><label>מס ששולם (25%)</label><input type="number" class="foreignDiv25Tax" placeholder="0"></div></div><div class="input-row"><div><label>ריבית חו"ל 15%</label><input type="number" class="foreignInt15" placeholder="0"></div><div><label>מס ששולם (15%)</label><input type="number" class="foreignInt15Tax" placeholder="0"></div></div><div class="input-row"><div><label>ריבית חו"ל 20%</label><input type="number" class="foreignInt20" placeholder="0"></div><div><label>מס ששולם (20%)</label><input type="number" class="foreignInt20Tax" placeholder="0"></div></div><div class="input-row"><div><label>ריבית חו"ל 25%</label><input type="number" class="foreignInt25" placeholder="0"></div><div><label>מס ששולם (25%)</label><input type="number" class="foreignInt25Tax" placeholder="0"></div></div></div>';c.appendChild(d)}
+function removeForm(id){var f=document.getElementById(id);if(f&&f.parentNode)f.parentNode.removeChild(f)}
+function getSum(s){var sum=0,els=document.querySelectorAll(s);for(var i=0;i<els.length;i++)sum+=parseFloat(els[i].value)||0;return sum}
+function getValue(id){var el=document.getElementById(id);return el?(parseFloat(el.value)||0):0}
+function calculate(){var forms=document.querySelectorAll('[id^="form867ab_"]');for(var i=0;i<forms.length;i++){var f=forms[i],p25=parseFloat(f.querySelector('.profit25').value)||0,p20=parseFloat(f.querySelector('.profit20').value)||0,p15=parseFloat(f.querySelector('.profit15').value)||0,sv=parseFloat(f.querySelector('.salesVolume').value)||0;if((p25+p20+p15)>0&&sv<(p25+p20+p15)){alert('שגיאה: מחזור מכירות חייב >= רווח');return}}
+var p25=getSum('.profit25'),p20=getSum('.profit20'),p15=getSum('.profit15'),sv=getSum('.salesVolume'),tw867ab=getSum('.taxWithheld867ab');
+var d25=getSum('.dividend25'),d20=getSum('.dividend20'),d15=getSum('.dividend15'),i25=getSum('.interest867c25'),i20=getSum('.interest867c20'),i15=getSum('.interest867c15'),tw867c=getSum('.taxWithheld867c');
+var fd25=getSum('.foreignDiv25'),fd25t=getSum('.foreignDiv25Tax');
+var fi25=getSum('.foreignInt25'),fi25t=getSum('.foreignInt25Tax'),fi20=getSum('.foreignInt20'),fi20t=getSum('.foreignInt20Tax'),fi15=getSum('.foreignInt15'),fi15t=getSum('.foreignInt15Tax');
+if(fd25>d25||fi25>i25||fi20>i20||fi15>i15){alert('שגיאה: הכנסות חו"ל לא יכולות להיות גבוהות מהכנסות ב-867ג');return}
+var fd25P=0,fi25P=0,fi20P=0,fi15P=0;
+if(fd25>0&&fd25t>0&&Math.abs((fd25t/fd25)-0.25)<0.01)fd25P=fd25;
+if(fi25>0&&fi25t>0&&Math.abs((fi25t/fi25)-0.25)<0.01)fi25P=fi25;
+if(fi20>0&&fi20t>0&&Math.abs((fi20t/fi20)-0.20)<0.01)fi20P=fi20;
+if(fi15>0&&fi15t>0&&Math.abs((fi15t/fi15)-0.15)<0.01)fi15P=fi15;
+var tfi=fd25+fi25+fi20+fi15,lcy=getSum('.lossOffsetable'),lpy=getValue('lossPrevYear');
+var dp25=getValue('deposit25'),dp20=getValue('deposit20'),dp15=getValue('deposit15'),tw=getValue('taxWithheld');
+var av25g=Math.max(0,(d25-fd25P)+(i25-fi25P)),o25g_cy=Math.min(lcy,av25g);lcy-=o25g_cy;
+var opy25=Math.min(lpy,p25);lpy-=opy25;
+var ocy25=0;if(opy25<p25){ocy25=Math.min(lcy,p25-opy25);lcy-=ocy25}
+var av20g=Math.max(0,d20+(i20-fi20P)),o20g_cy=Math.min(lcy,av20g);lcy-=o20g_cy;
+var opy20=Math.min(lpy,p20);lpy-=opy20;
+var ocy20=0;if(opy20<p20){ocy20=Math.min(lcy,p20-opy20);lcy-=ocy20}
+var av15g=Math.max(0,d15+(i15-fi15P)),o15g_cy=Math.min(lcy,av15g);lcy-=o15g_cy;
+var opy15=Math.min(lpy,p15);lpy-=opy15;
+var ocy15=0;if(opy15<p15){ocy15=Math.min(lcy,p15-opy15);lcy-=ocy15}
+var fDiv25=Math.max(0,d25-Math.min(o25g_cy,d25-fd25P)),fDiv20=Math.max(0,d20-Math.min(o20g_cy,d20)),fDiv15=Math.max(0,d15-Math.min(o15g_cy,d15));
+var fInt25=Math.max(0,i25-Math.max(0,o25g_cy-(d25-fd25P))-fi25P),fInt20=Math.max(0,i20-Math.max(0,o20g_cy-d20)-fi20P),fInt15=Math.max(0,i15-Math.max(0,o15g_cy-d15)-fi15P);
+var tlcf=lcy+lpy,fc=forms.length,h='';
+if(p25>0||p20>0||p15>0||sv>0){h+='<div class="result-item"><strong><span class="system-badge">IHON</span>טופס 867 א+ב</strong>';
+if(p15>0)h+='<div>קוד 12 (רווח 15%): ₪'+p15.toLocaleString('he-IL')+'</div>';
+if(p20>0)h+='<div>קוד 10 (רווח 20%): ₪'+p20.toLocaleString('he-IL')+'</div>';
+if(p25>0)h+='<div>קוד 13 (רווח 25%): ₪'+p25.toLocaleString('he-IL')+'</div>';
+if(ocy15>0)h+='<div>קוד 32 (הפסד מתקזז 15%): ₪'+ocy15.toLocaleString('he-IL')+'</div>';
+if(opy15>0)h+='<div>קוד 62 (הפסד מועבר 15%): ₪'+opy15.toLocaleString('he-IL')+'</div>';
+if(ocy20>0)h+='<div>קוד 30 (הפסד מתקזז 20%): ₪'+ocy20.toLocaleString('he-IL')+'</div>';
+if(opy20>0)h+='<div>קוד 60 (הפסד מועבר 20%): ₪'+opy20.toLocaleString('he-IL')+'</div>';
+if(ocy25>0)h+='<div>קוד 33 (הפסד מתקזז 25%): ₪'+ocy25.toLocaleString('he-IL')+'</div>';
+if(opy25>0)h+='<div>קוד 63 (הפסד מועבר 25%): ₪'+opy25.toLocaleString('he-IL')+'</div>';
+if(sv>0)h+='<div>קוד 56 (מחזור מכירות): ₪'+sv.toLocaleString('he-IL')+'</div>';h+='</div>'}
+h+='<div class="result-item"><strong><span class="system-badge">ISUM</span>שאילתת ISUM</strong>';
+if(sv>0)h+='<div>שדה 256 (מחזור מכירות): ₪'+sv.toLocaleString('he-IL')+'</div>';
+if(fc>0&&(p25>0||p20>0||p15>0))h+='<div>שדה 054 (נספחים): '+fc+'</div>';
+var twc=tw867ab+tw867c;
+if(twc>0)h+='<div>שדה 040 (ניכוי במקור): ₪'+twc.toLocaleString('he-IL')+'</div>';
+if(tw>0)h+='<div>שדה 043 (ניכוי פקדונות): ₪'+tw.toLocaleString('he-IL')+'</div>';
+if(tfi>0)h+='<div>שדה 290 (חו"ל): ₪'+tfi.toLocaleString('he-IL')+'</div>';
+if(fDiv15>0)h+='<div>שדה 060 (דיבידנד 15%): ₪'+fDiv15.toLocaleString('he-IL')+'</div>';
+if(fDiv20>0)h+='<div>שדה 173 (דיבידנד 20%): ₪'+fDiv20.toLocaleString('he-IL')+'</div>';
+if(fDiv25>0)h+='<div>שדה 141 (דיבידנד 25%): ₪'+fDiv25.toLocaleString('he-IL')+'</div>';
+if(fInt15>0)h+='<div>שדה 060 (ריבית 15%): ₪'+fInt15.toLocaleString('he-IL')+'</div>';
+if(fInt20>0)h+='<div>שדה 067 (ריבית 20%): ₪'+fInt20.toLocaleString('he-IL')+'</div>';
+if(fInt25>0)h+='<div>שדה 157 (ריבית 25%): ₪'+fInt25.toLocaleString('he-IL')+'</div>';
+if(dp15>0)h+='<div>שדה 078 (פיקדון 15%): ₪'+dp15.toLocaleString('he-IL')+'</div>';
+if(dp20>0)h+='<div>שדה 126 (פיקדון 20%): ₪'+dp20.toLocaleString('he-IL')+'</div>';
+if(dp25>0)h+='<div>שדה 142 (פיקדון 25%): ₪'+dp25.toLocaleString('he-IL')+'</div>';
+if(tlcf>0)h+='<div>שדה 166 (הפסד להעברה): ₪'+tlcf.toLocaleString('he-IL')+'</div>';h+='</div>';
+if(tfi>0){h+='<div class="result-item"><strong><span class="system-badge">נספח חו"ל</span>הכנסות מחו"ל</strong>';
+if(fd25>0){h+='<div>שדה 462 (דיבידנד 25%): ₪'+fd25.toLocaleString('he-IL')+'</div>';if(fd25t>0)h+='<div>שדה 431 (מס ששולם): ₪'+fd25t.toLocaleString('he-IL')+'</div>'}
+if(fi15>0){h+='<div>שדה 460 (ריבית 15%): ₪'+fi15.toLocaleString('he-IL')+'</div>';if(fi15t>0)h+='<div>שדה 412 (מס ששולם): ₪'+fi15t.toLocaleString('he-IL')+'</div>'}
+if(fi20>0){h+='<div>שדה 451 (ריבית 20%): ₪'+fi20.toLocaleString('he-IL')+'</div>';if(fi20t>0)h+='<div>שדה 428 (מס ששולם): ₪'+fi20t.toLocaleString('he-IL')+'</div>'}
+if(fi25>0){h+='<div>שדה 457 (ריבית 25%): ₪'+fi25.toLocaleString('he-IL')+'</div>';if(fi25t>0)h+='<div>שדה 417 (מס ששולם): ₪'+fi25t.toLocaleString('he-IL')+'</div>'}
+h+='</div>'}
+document.getElementById('resultsContent').innerHTML=h;document.getElementById('results').classList.add('show')}
+    </script>
+</body>
+</html>

@@ -187,6 +187,16 @@ async def home():
     return index_path.read_text(encoding="utf-8")
 
 
+@app.get("/prisa", response_class=HTMLResponse)
+async def prisa_calculator():
+    return (STATIC_PATH / "prisa.html").read_text(encoding="utf-8")
+
+
+@app.get("/tax867", response_class=HTMLResponse)
+async def tax867_calculator():
+    return (STATIC_PATH / "tax867.html").read_text(encoding="utf-8")
+
+
 @app.post("/api/ask")
 async def ask_question(req: QuestionRequest):
     question = req.question.strip()

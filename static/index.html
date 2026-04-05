@@ -591,14 +591,6 @@
           אני עוזרך המקצועי לנושאי <strong>החזרי מס</strong>.<br/>
           שאל אותי כל שאלה הנוגעת לפקודת מס הכנסה, חוזרים מקצועיים, ניתוב שלב א', וחומרי זכותי.
         </p>
-        <div class="suggestions" id="suggestion-btns">
-          <button class="suggestion-btn" onclick="useSuggestion(this)">מה הן נקודות הזיכוי לעובד?</button>
-          <button class="suggestion-btn" onclick="useSuggestion(this)">איך מחשבים החזר מס לשכיר?</button>
-          <button class="suggestion-btn" onclick="useSuggestion(this)">מה קובע סעיף 47 לפקודה?</button>
-          <button class="suggestion-btn" onclick="useSuggestion(this)">מה ההבדל בין ניכוי לזיכוי?</button>
-          <button class="suggestion-btn" onclick="useSuggestion(this)">ניתוב שלב א' - מה כולל?</button>
-          <button class="suggestion-btn" onclick="useSuggestion(this)">דיווח על הכנסות מחו"ל</button>
-        </div>
       </div>
 
     </div>
@@ -633,7 +625,6 @@
           <span class="status-dot loading" id="status-dot"></span>
           <span class="status-info" id="status-text">בודק חיבור...</span>
         </div>
-        <div class="status-info" id="chunks-info"></div>
       </div>
     </div>
 
@@ -649,19 +640,6 @@
       </div>
     </div>
 
-    <!-- INFO -->
-    <div class="sidebar-card">
-      <div class="sidebar-card-header">
-        &#128214; מקורות ידע
-      </div>
-      <div class="sidebar-card-body" style="font-size:12.5px;line-height:1.8;color:var(--text-muted);">
-        <div>&#10003; קבצים מקומיים של המשרד</div>
-        <div>&#10003; פקודת מס הכנסה</div>
-        <div>&#10003; חוזרים מקצועיים</div>
-        <div>&#10003; ניתוב שלב א' (20 שנה)</div>
-        <div>&#10003; אתר זכותי - מס הכנסה</div>
-      </div>
-    </div>
 
   </div>
 </div>
@@ -713,15 +691,12 @@
       const data = await res.json();
       const dot = document.getElementById('status-dot');
       const txt = document.getElementById('status-text');
-      const info = document.getElementById('chunks-info');
       if (data.rag_ready) {
         dot.className = 'status-dot';
         txt.textContent = 'מערכת פעילה';
-        info.textContent = `${data.chunks_loaded.toLocaleString()} קטעי ידע טעונים`;
       } else {
         dot.className = 'status-dot offline';
         txt.textContent = 'מאגר הידע ריק';
-        info.textContent = 'אנא פנה למנהל המערכת';
       }
     } catch {
       document.getElementById('status-dot').className = 'status-dot offline';

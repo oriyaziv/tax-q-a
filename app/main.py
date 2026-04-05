@@ -290,8 +290,8 @@ async def analyze_form_106(
         if not content:
             continue
         suffix = Path(file.filename or "").suffix.lower()
-        if suffix in (".jpg", ".jpeg"):
-            mime = "image/jpeg"
+        if suffix == ".pdf":
+            mime = "application/pdf"
         elif suffix == ".png":
             mime = "image/png"
         elif suffix == ".webp":

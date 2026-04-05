@@ -12,13 +12,14 @@ from pathlib import Path
 from typing import Optional
 
 KNOWLEDGE_BASE_PATH = Path(__file__).parent.parent / "data" / "knowledge_base.json"
-TOP_K = 8
+TOP_K = 5
 BASE = "https://generativelanguage.googleapis.com"
 
 EMBED_CANDIDATES = ["gemini-embedding-001", "gemini-embedding-2-preview", "embedding-001"]
 CHAT_CANDIDATES = [
-    "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-001",
-    "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-flash-001",
+    "gemini-2.0-flash", "gemini-2.0-flash-001",
+    "gemini-2.5-flash", "gemini-2.0-flash-lite",
+    "gemini-1.5-flash", "gemini-1.5-flash-001",
     "gemini-1.5-pro", "gemini-pro",
 ]
 
@@ -397,7 +398,11 @@ def answer_question(question: str) -> dict:
 
     payload = {
         "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-        "contents": [{"parts": [{"text": prompt}]}]
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.1,
+            "thinkingConfig": {"thinkingBudget": 0}
+        }
     }
     resp = requests.post(_chat_url, params={"key": _api_key}, json=payload, timeout=60)
     resp.raise_for_status()

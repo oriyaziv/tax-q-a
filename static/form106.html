@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ניתוח טופס 106 → שאילתא</title>
+  <style>
+    :root {
+      --primary: #1a3a6b;
+      --primary-light: #2a5298;
+      --accent: #c8a951;
+      --bg: #f4f6fa;
+      --card: #ffffff;
+      --border: #dde3ed;
+      --text: #1e2a3a;
+      --muted: #6b7a8d;
+      --green: #2e7d32;
+      --glight: #e8f5e9;
+      --red: #c62828;
+      --rlight: #fdecea;
+      --shadow: 0 2px 12px rgba(26,58,107,0.10);
+      --r: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      direction: rtl;
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-brand { display: flex; align-items: center; gap: 12px; }
+    .header-logo {
+      width: 40px; height: 40px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: bold; color: var(--primary);
+    }
+    .header-title { font-size: 17px; font-weight: 700; }
+    .header-subtitle { font-size: 12px; opacity: 0.8; }
+    .btn-back {
+      background: rgba(255,255,255,0.15);
+      border: none; color: white;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px; cursor: pointer;
+      text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+      transition: background 0.2s;
+    }
+    .btn-back:hover { background: rgba(255,255,255,0.25); }
+
+    /* MAIN */
+    .main { max-width: 820px; margin: 0 auto; padding: 28px 16px 60px; }
+
+    /* INFO BOX */
+    .info-box {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+      color: #5d4037;
+    }
+    .info-box strong { color: #bf360c; }
+
+    /* UPLOAD ZONE */
+    .upload-card {
+      background: var(--card);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      color: var(--muted);
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary-light);
+      background: #f0f4fb;
+    }
+    .drop-icon { font-size: 40px; margin-bottom: 10px; }
+    .drop-text { font-size: 14px; line-height: 1.6; }
+    .drop-hint { font-size: 12px; color: #aab; margin-top: 4px; }
+    #file-input { display: none; }
+
+    /* FILE LIST */
+    .file-list {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .file-item {
+      background: #f0f4fb;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+    .file-item .file-name { color: var(--primary-light); font-weight: 600; }
+    .file-item .file-size { color: var(--muted); font-size: 11px; }
+    .remove-file {
+      background: none; border: none;
+      color: var(--red);
+      cursor: pointer; font-size: 16px; padding: 2px 6px;
+    }
+
+    /* NOTES */
+    .notes-area {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13.5px;
+      font-family: inherit;
+      direction: rtl;
+      resize: vertical;
+      min-height: 80px;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color 0.2s;
+    }
+    .notes-area:focus { outline: none; border-color: var(--primary-light); background: white; }
+
+    /* ANALYZE BUTTON */
+    .btn-analyze {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 13px 32px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 16px;
+      transition: background 0.2s, opacity 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn-analyze:hover:not(:disabled) { background: var(--primary-light); }
+    .btn-analyze:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* SPINNER */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* STATUS */
+    .status-msg {
+      text-align: center;
+      font-size: 13px;
+      min-height: 20px;
+      margin-top: 10px;
+      color: var(--muted);
+    }
+    .status-msg.error { color: var(--red); font-weight: 600; }
+
+    /* RESULTS */
+    .results-card {
+      background: var(--card);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: none;
+      margin-top: 24px;
+    }
+    .results-card.show { display: block; }
+    .results-header {
+      background: var(--primary);
+      color: white;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .results-title { font-size: 15px; font-weight: 700; }
+    .year-badge {
+      background: var(--accent);
+      color: var(--primary);
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .results-body { padding: 20px; }
+
+    /* EMPLOYERS */
+    .employers-section {
+      margin-bottom: 18px;
+      background: #f0f4fb;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .employers-label { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+    .employer-row { font-size: 13px; color: var(--text); line-height: 1.8; }
+
+    /* CODES TABLE */
+    .codes-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    .codes-table thead th {
+      background: #f0f4fb;
+      padding: 8px 12px;
+      text-align: right;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 2px solid var(--border);
+    }
+    .codes-table thead th.th-amount { text-align: left; direction: ltr; }
+    .codes-table tbody tr { border-bottom: 1px solid #f0ede8; }
+    .codes-table tbody tr:last-child { border-bottom: none; }
+    .codes-table tbody td { padding: 9px 12px; vertical-align: middle; }
+    .code-badge {
+      display: inline-block;
+      background: #e8eff9;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--primary-light);
+      min-width: 44px;
+      text-align: center;
+    }
+    .code-badge.income { background: #e8f5e9; color: var(--green); }
+    .code-badge.deduction { background: #fdecea; color: var(--red); }
+    .code-badge.credit { background: #fff8e1; color: #e65100; }
+    .td-amount {
+      font-family: monospace;
+      font-weight: 600;
+      direction: ltr;
+      text-align: left;
+    }
+    .td-amount.income { color: var(--green); }
+    .td-amount.deduction { color: var(--red); }
+    .td-amount.credit { color: #e65100; }
+
+    /* NOTES */
+    .notes-result {
+      margin-top: 16px;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #5d4037;
+    }
+
+    /* COPY BUTTON */
+    .btn-copy {
+      background: white;
+      border: 1.5px solid var(--primary-light);
+      color: var(--primary-light);
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 16px;
+      transition: background 0.2s;
+    }
+    .btn-copy:hover { background: #f0f4fb; }
+    .btn-copy.copied { border-color: var(--green); color: var(--green); }
+
+    /* RESET */
+    .btn-reset {
+      background: #f4f6fa;
+      border: 1.5px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 16px;
+      margin-right: 8px;
+      transition: background 0.2s;
+    }
+    .btn-reset:hover { background: var(--border); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="header-logo">106</div>
+    <div>
+      <div class="header-title">ניתוח טופס 106 → שאילתא</div>
+      <div class="header-subtitle">חילוץ קודים ממאגר המעסיק לשאילתת מס הכנסה</div>
+    </div>
+  </div>
+  <a href="/" class="btn-back">&#8594; חזרה לשאלות ותשובות</a>
+</header>
+
+<div class="main">
+
+  <div class="info-box">
+    <strong>&#128247; כיצד להשתמש:</strong>
+    צלם את טופס/י 106 שקיבלת מהמעסיק/ים וגרור אותם לכאן (JPEG/PNG).
+    המערכת תחלץ את הנתונים ותציג את הקודים והסכומים לפי פורמט השאילתא במס הכנסה (דומה לטופס 135).
+    אם יש מספר מעסיקים — ניתן לצרף מספר תמונות בבת אחת.
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="upload-card">
+    <div class="section-title">&#128247; העלאת תמונות טופס 106</div>
+
+    <div class="drop-zone" id="drop-zone"
+         onclick="document.getElementById('file-input').click()"
+         ondragover="onDragOver(event)"
+         ondragleave="onDragLeave(event)"
+         ondrop="onDrop(event)">
+      <div class="drop-icon">&#128247;</div>
+      <div class="drop-text">לחץ לבחירת תמונות או גרור לכאן</div>
+      <div class="drop-hint">JPEG, PNG, WebP &nbsp;|&nbsp; ניתן לצרף מספר טפסים (מספר מעסיקים)</div>
+    </div>
+    <input type="file" id="file-input" accept="image/*,.jpg,.jpeg,.png,.webp"
+           multiple onchange="onFilesSelected(this)" />
+
+    <div class="file-list" id="file-list"></div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="upload-card">
+    <div class="section-title">&#128221; נתונים נוספים (אופציונלי)</div>
+    <textarea class="notes-area" id="notes"
+      placeholder="למשל: שנת מס 2024, נישום גבר, יש ילדים, הכנסות נוספות ממקורות אחרים..."></textarea>
+  </div>
+
+  <button class="btn-analyze" id="analyze-btn" onclick="doAnalyze()" disabled>
+    <span class="spinner" id="spinner"></span>
+    <span id="btn-text">&#129302; נתח וחלץ קודים</span>
+  </button>
+  <div class="status-msg" id="status-msg"></div>
+
+  <!-- RESULTS -->
+  <div class="results-card" id="results-card">
+    <div class="results-header">
+      <div class="results-title">&#128203; נתוני השאילתא</div>
+      <div id="year-badge" class="year-badge"></div>
+    </div>
+    <div class="results-body">
+      <div class="employers-section" id="employers-section" style="display:none">
+        <div class="employers-label">מעסיקים</div>
+        <div class="employer-row" id="employers-list"></div>
+      </div>
+
+      <table class="codes-table">
+        <thead>
+          <tr>
+            <th style="width:60px">קוד</th>
+            <th>תיאור</th>
+            <th class="th-amount">סכום (₪)</th>
+          </tr>
+        </thead>
+        <tbody id="codes-body"></tbody>
+      </table>
+
+      <div class="notes-result" id="notes-result" style="display:none"></div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:16px;">
+        <button class="btn-copy" id="copy-btn" onclick="copyResults()">&#128203; העתק לטקסט</button>
+        <button class="btn-reset" onclick="resetForm()">&#8635; ניתוח חדש</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let selectedFiles = [];
+
+  // ─── FILE MANAGEMENT ───
+  function onFilesSelected(input) {
+    addFiles(Array.from(input.files));
+    input.value = '';
+  }
+
+  function onDragOver(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.add('drag-over');
+  }
+  function onDragLeave(e) {
+    document.getElementById('drop-zone').classList.remove('drag-over');
+  }
+  function onDrop(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.remove('drag-over');
+    addFiles(Array.from(e.dataTransfer.files));
+  }
+
+  function addFiles(newFiles) {
+    for (const f of newFiles) {
+      if (!selectedFiles.find(x => x.name === f.name && x.size === f.size)) {
+        selectedFiles.push(f);
+      }
+    }
+    renderFileList();
+    document.getElementById('analyze-btn').disabled = selectedFiles.length === 0;
+  }
+
+  function renderFileList() {
+    const list = document.getElementById('file-list');
+    list.innerHTML = '';
+    selectedFiles.forEach((f, i) => {
+      const div = document.createElement('div');
+      div.className = 'file-item';
+      div.innerHTML = `
+        <div>
+          <span class="file-name">&#128247; ${escHtml(f.name)}</span>
+          <span class="file-size"> · ${(f.size / 1024).toFixed(0)} KB</span>
+        </div>
+        <button class="remove-file" onclick="removeFile(${i})" title="הסר">&#10005;</button>
+      `;
+      list.appendChild(div);
+    });
+  }
+
+  function removeFile(idx) {
+    selectedFiles.splice(idx, 1);
+    renderFileList();
+    document.getElementById('analyze-btn').disabled = selectedFiles.length === 0;
+  }
+
+  // ─── ANALYZE ───
+  async function doAnalyze() {
+    if (selectedFiles.length === 0) return;
+
+    const btn = document.getElementById('analyze-btn');
+    const spinner = document.getElementById('spinner');
+    const btnText = document.getElementById('btn-text');
+    const status = document.getElementById('status-msg');
+
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    btnText.textContent = 'מנתח... (עשוי לקחת עד 30 שניות)';
+    status.textContent = '';
+    status.className = 'status-msg';
+    document.getElementById('results-card').classList.remove('show');
+
+    const formData = new FormData();
+    for (const f of selectedFiles) {
+      formData.append('files', f);
+    }
+    formData.append('notes', document.getElementById('notes').value);
+
+    try {
+      const res = await fetch('/api/analyze-106', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'שגיאה בניתוח הטופס');
+      }
+      const data = await res.json();
+      renderResults(data);
+    } catch (e) {
+      status.textContent = e.message || 'שגיאת רשת. נסה שוב.';
+      status.className = 'status-msg error';
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      btnText.textContent = '&#129302; נתח וחלץ קודים';
+    }
+  }
+
+  // ─── RENDER RESULTS ───
+  const INCOME_CODES = new Set(['158','236','237','242','243','245']);
+  const DEDUCTION_CODES = new Set(['042','045','047','048','049','050']);
+  const CREDIT_CODES = new Set(['064','065']);
+
+  function codeClass(code) {
+    if (INCOME_CODES.has(code)) return 'income';
+    if (DEDUCTION_CODES.has(code)) return 'deduction';
+    if (CREDIT_CODES.has(code)) return 'credit';
+    return '';
+  }
+
+  function renderResults(data) {
+    // Year badge
+    const yearBadge = document.getElementById('year-badge');
+    yearBadge.textContent = data.tax_year ? `שנת מס ${data.tax_year}` : '';
+
+    // Employers
+    const empSection = document.getElementById('employers-section');
+    const empList = document.getElementById('employers-list');
+    if (data.employers && data.employers.length > 0) {
+      empList.innerHTML = data.employers.map(e =>
+        `<div>&#127970; <strong>${escHtml(e.name || '')}</strong>` +
+        (e.employer_id ? ` &nbsp;|&nbsp; מספר עוסק: ${escHtml(e.employer_id)}` : '') +
+        (e.period ? ` &nbsp;|&nbsp; תקופה: ${escHtml(e.period)}` : '') +
+        `</div>`
+      ).join('');
+      empSection.style.display = 'block';
+    } else {
+      empSection.style.display = 'none';
+    }
+
+    // Codes table
+    const tbody = document.getElementById('codes-body');
+    tbody.innerHTML = '';
+    const codes = data.codes || [];
+    for (const row of codes) {
+      const cls = codeClass(String(row.code));
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="code-badge ${cls}">${escHtml(String(row.code))}</span></td>
+        <td>${escHtml(row.name || '')}</td>
+        <td class="td-amount ${cls}">${Number(row.amount).toLocaleString('he-IL')}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    // Notes
+    const notesDiv = document.getElementById('notes-result');
+    if (data.notes) {
+      notesDiv.textContent = '⚠ ' + data.notes;
+      notesDiv.style.display = 'block';
+    } else {
+      notesDiv.style.display = 'none';
+    }
+
+    document.getElementById('results-card').classList.add('show');
+    document.getElementById('results-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ─── COPY ───
+  function copyResults() {
+    const codes = document.getElementById('codes-body').querySelectorAll('tr');
+    let text = 'קוד\tתיאור\tסכום\n';
+    codes.forEach(tr => {
+      const cells = tr.querySelectorAll('td');
+      if (cells.length === 3) {
+        text += `${cells[0].textContent.trim()}\t${cells[1].textContent.trim()}\t${cells[2].textContent.trim()}\n`;
+      }
+    });
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = '✓ הועתק!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = '📋 העתק לטקסט';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  // ─── RESET ───
+  function resetForm() {
+    selectedFiles = [];
+    renderFileList();
+    document.getElementById('analyze-btn').disabled = true;
+    document.getElementById('notes').value = '';
+    document.getElementById('status-msg').textContent = '';
+    document.getElementById('results-card').classList.remove('show');
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

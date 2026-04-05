@@ -11,7 +11,10 @@ from datetime import datetime
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File
+import base64
+import requests
+
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -179,6 +182,58 @@ class QuestionRequest(BaseModel):
     question: str
 
 
+# ─── FORM 106 ANALYSIS ───
+
+FORM106_PROMPT = """אתה מומחה מיסוי ישראלי. לפניך תמונות של טפסי 106 (אישורי מעסיק שנתיים).
+עליך לחלץ את הנתונים ולמפות אותם לקודי השאילתא במס הכנסה (הדומה לטופס 135).
+
+## מיפוי שדות טופס 106 → קודי שאילתה:
+
+### הכנסות מיגיעה אישית:
+- משכורת / שכר עבודה (שדה 158) → קוד 158
+- מענק פרישה חייב (שדה 243) → קוד 243
+- קצבה חייבת (שדה 242) → קוד 242
+- שווי שימוש ברכב (שדה 237) → קוד 237
+- הכנסות אחרות מעבודה (שדה 236) → קוד 236
+- שווי ארוחות / תנאים סוציאליים (שדה 245) → קוד 245
+- מענק פטור (שדה 9020) → לא מופיע בשאילתא (פטור)
+
+### ניכויים שנוכו במקור:
+- מס הכנסה שנוכה (שדה 042) → קוד 042
+- דמי ביטוח לאומי (שדה 045) → קוד 045
+- דמי ביטוח בריאות (שדה 047) → קוד 047
+- תשלומי עובד לפנסיה/ביטוח מנהלים (שדה 048) → קוד 048
+- תשלומי עובד לקרן השתלמות (שדה 049) → קוד 049
+- תשלומי עובד לקופת גמל (שדה 050) → קוד 050
+
+### זיכויים ממס:
+- זיכוי ממס בגין פנסיה/ביטוח מנהלים (שדה 064) → קוד 064
+- זיכוי ממס בגין קופת גמל (שדה 065) → קוד 065
+
+### נקודות זיכוי:
+- נקודות זיכוי שניתנו (שדה 047א) → קוד 047א / 2.25 כברירת מחדל
+
+## הוראות חילוץ:
+1. חלץ את שם המעסיק ומספר העוסק/ח.פ. מכל טופס
+2. אם יש מספר טפסים — **צבור** את הסכומים לפי קוד
+3. כלול רק קודים שהסכום שלהם גדול מ-0
+4. עגל לשקלים שלמים
+5. ציין את שנת המס (מופיעה בטופס)
+
+## פורמט תשובה (JSON בלבד, ללא טקסט נוסף):
+{
+  "tax_year": "2024",
+  "employers": [
+    {"name": "שם מעסיק", "employer_id": "מספר עוסק", "period": "01/24-12/24"}
+  ],
+  "codes": [
+    {"code": "158", "name": "הכנסת עבודה", "amount": 120000},
+    {"code": "042", "name": "מס הכנסה שנוכה", "amount": 18000}
+  ],
+  "notes": "הערות על החילוץ (אם יש אי-ודאות)"
+}"""
+
+
 # ─── ROUTES ───
 
 @app.get("/", response_class=HTMLResponse)
@@ -197,6 +252,11 @@ async def tax867_calculator():
     return (STATIC_PATH / "tax867.html").read_text(encoding="utf-8")
 
 
+@app.get("/form106", response_class=HTMLResponse)
+async def form106_page():
+    return (STATIC_PATH / "form106.html").read_text(encoding="utf-8")
+
+
 @app.post("/api/ask")
 async def ask_question(req: QuestionRequest):
     question = req.question.strip()
@@ -211,6 +271,75 @@ async def ask_question(req: QuestionRequest):
     except Exception as e:
         print(f"[API] Error answering question: {e}")
         raise HTTPException(status_code=500, detail="שגיאה בעיבוד השאלה. אנא נסה שוב.")
+
+
+@app.post("/api/analyze-106")
+async def analyze_form_106(
+    files: list[UploadFile] = File(default=[]),
+    notes: str = Form(default="")
+):
+    if not files or all(f.size == 0 for f in files if hasattr(f, "size")):
+        raise HTTPException(status_code=400, detail="יש לצרף לפחות תמונה אחת של טופס 106.")
+
+    if not rag._chat_url or not rag._api_key:
+        raise HTTPException(status_code=500, detail="מודל הבינה המלאכותית אינו זמין.")
+
+    parts = []
+    for file in files:
+        content = await file.read()
+        if not content:
+            continue
+        suffix = Path(file.filename or "").suffix.lower()
+        if suffix in (".jpg", ".jpeg"):
+            mime = "image/jpeg"
+        elif suffix == ".png":
+            mime = "image/png"
+        elif suffix == ".webp":
+            mime = "image/webp"
+        elif suffix == ".heic":
+            mime = "image/heic"
+        else:
+            mime = "image/jpeg"
+        parts.append({
+            "inlineData": {
+                "mimeType": mime,
+                "data": base64.b64encode(content).decode("ascii")
+            }
+        })
+
+    if not parts:
+        raise HTTPException(status_code=400, detail="לא נמצאו תמונות תקינות.")
+
+    extra = f"\n\nנתונים נוספים שהמשתמש ציין: {notes}" if notes.strip() else ""
+    parts.append({"text": FORM106_PROMPT + extra})
+
+    payload = {
+        "contents": [{"parts": parts}],
+        "generationConfig": {"temperature": 0}
+    }
+
+    try:
+        resp = requests.post(
+            rag._chat_url,
+            params={"key": rag._api_key},
+            json=payload,
+            timeout=90
+        )
+        resp.raise_for_status()
+        raw = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        # Strip markdown code fences if present
+        if raw.startswith("```"):
+            raw = "\n".join(raw.split("\n")[1:])
+        if raw.endswith("```"):
+            raw = raw.rsplit("```", 1)[0]
+        result = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="שגיאה בפענוח תשובת המודל. נסה שוב.")
+    except Exception as e:
+        print(f"[Form106] Error: {e}")
+        raise HTTPException(status_code=500, detail="שגיאה בניתוח הטופס. אנא נסה שוב.")
+
+    return result
 
 
 @app.post("/api/upload")
